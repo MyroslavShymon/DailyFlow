@@ -1,0 +1,9 @@
+.env
+.venv/
+
+*.egg-info/
+/data/
+src/daily_flow/data/
+
+.vscode/
+.idea/

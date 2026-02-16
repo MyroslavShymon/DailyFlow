@@ -1,0 +1,29 @@
+[project]
+name = "daily-flow"
+version = "0.1.0"
+description = "DailyFlow is a personal tracker and analytics project for collecting daily quality of life metrics (mood, energy, stress, notes) and getting simple insights and statistics. Data is stored locally in SQLite, analyzed via Pandas, and a Telegram bot acts as an easy UI for input and viewing."
+requires-python = ">=3.10,<3.12"
+dependencies = [
+    "pandas>=2.3,<2.4",
+    "openpyxl>=3.1",
+    "SQLAlchemy>=2.0,<2.1",
+    "pydantic>=2.12,<2.13",
+    "python-dotenv>=1.2,<1.3"
+]
+[project.optional-dependencies]
+ui = [
+    "aiogram>=3.0",
+    "python-telegram-bot>=22.5,<23",
+]
+dev = [
+    "pytest>=9.0,<9.1",
+    "pytest-asyncio>=1.3,<1.4",
+    "ruff>=0.14,<0.15",
+    "mypy>=1.19,<1.20",
+    "pre-commit>=4.5,<4.6"
+]
+[project.scripts]
+start_bot = "daily_flow.entrypoints.bot_main:main"
+ingest = "daily_flow.entrypoints.ingest_main:main"
+#daily-flow = "daily_flow.__main__:main"
+#init-db = "daily_flow.db.init:init_db"
