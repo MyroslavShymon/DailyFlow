@@ -1,4 +1,4 @@
-from daily_flow.db.repositories.common_mood_repo import CommonMoodLog
+from daily_flow.db.repositories.common_mood_repo import CommonMoodLog, MoodTagImpact
 
 
 def render_common_mood_log(common_mood_log: CommonMoodLog) -> str:
@@ -6,7 +6,7 @@ def render_common_mood_log(common_mood_log: CommonMoodLog) -> str:
         1: "😢 жахливо",
         2: "☹️ погано",
         3: "😐 посередньо",
-        4: "🙂 непогано",
+        4: "🙂 нормально",
         5: "😊 добре",
         6: "😁 чудово",
         7: "🤩 неймовірно"
@@ -22,20 +22,19 @@ def render_common_mood_log(common_mood_log: CommonMoodLog) -> str:
     )
 
 
-# def render_tag_impact(dto: UpsertTagImpactDTO) -> str:
-#     # Мапінг впливу на зрозумілі символи
-#     impact_map = {
-#         -1: "🔻 Негативно впливає",
-#          0: "🟡 Нейтрально",
-#          1: "☘️ Позитивно впливає"
-#     }
-#
-#     impact_display = impact_map.get(dto.impact, "Невідомо")
-#
-#     return (
-#         f"🏷️ **Вплив події (тег)**\n"
-#         f"---"
-#         f"📅 Дата: **{dto.day}**\n"
-#         f"🔖 Тег: `#{dto.tag}`\n"
-#         f"⚡ Ефект: **{impact_display}**"
-#     )
+def render_tag_impact(tag_impact: MoodTagImpact, day: str) -> str:
+    impact_map = {
+        -1: "🔻 Негативно впливає",
+         0: "🟡 Нейтрально",
+         1: "☘️ Позитивно впливає"
+    }
+
+    impact_display = impact_map.get(tag_impact.impact, "Невідомо")
+
+    return (
+        f"🏷️ **Вплив події (тег)**\n"
+        f"---"
+        f"📅 Дата: **{day}**\n"
+        f"🔖 Тег: `#{tag_impact.tag}`\n"
+        f"⚡ Ефект: **{impact_display}**"
+    )

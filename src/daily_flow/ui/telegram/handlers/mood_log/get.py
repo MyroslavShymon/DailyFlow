@@ -8,13 +8,10 @@ from daily_flow.ui.telegram.keyboards.mood import MoodMenu
 from daily_flow.ui.telegram.render.mood_log import render_mood_log
 from daily_flow.ui.telegram.runtime import router, c
 from daily_flow.ui.telegram.states import MoodGetForm
-from daily_flow.ui.telegram.utils.date_selection import DATE_PATTERN, DateAction, get_date_keyboard
+from daily_flow.ui.telegram.utils.date_selection import DateAction, get_date_keyboard
+
 
 logger = logging.getLogger(__name__)
-
-@router.message(MoodGetForm.waiting_for_date, F.text.regexp(DATE_PATTERN))
-async def get_mood_log_message(message: types.Message, state: FSMContext):
-    await perform_mood_log_get(message, message.text, state)
 
 async def perform_mood_log_get(message: types.Message, date_str: str, state: FSMContext):
     try:

@@ -18,7 +18,6 @@ async def cancel_handler(callback: types.CallbackQuery, state: FSMContext):
 
 @router.message(StateFilter(None), F.text == MainMenu.BTN_MENU)
 async def menu_handler(message: types.Message, state: FSMContext):
-    print(f"dfgfgnfgfgmfgn")
     await state.clear()
     await message.answer(
         text="Повертаємось до початкового меню.",

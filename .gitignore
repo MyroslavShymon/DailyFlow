@@ -5,5 +5,8 @@
 /data/
 src/daily_flow/data/
 
+__pycache__/
+*.py[cod]
+
 .vscode/
 .idea/

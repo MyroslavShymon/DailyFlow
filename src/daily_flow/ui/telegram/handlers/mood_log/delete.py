@@ -7,14 +7,10 @@ from aiogram.fsm.context import FSMContext
 from daily_flow.ui.telegram.keyboards.mood import MoodMenu
 from daily_flow.ui.telegram.runtime import router, c
 from daily_flow.ui.telegram.states import MoodDeleteForm
-from daily_flow.ui.telegram.utils.date_selection import DATE_PATTERN, DateAction, get_date_keyboard
+from daily_flow.ui.telegram.utils.date_selection import DateAction, get_date_keyboard
 
 
 logger = logging.getLogger(__name__)
-
-@router.message(MoodDeleteForm.waiting_for_date, F.text.regexp(DATE_PATTERN))
-async def delete_mood_log_message(message: types.Message, state: FSMContext):
-    await perform_mood_log_delete(message, message.text, state)
 
 async def perform_mood_log_delete(message: types.Message, date_str: str, state: FSMContext):
     try:

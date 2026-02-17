@@ -8,14 +8,10 @@ from daily_flow.ui.telegram.keyboards.common_mood import CommonMoodMenu
 from daily_flow.ui.telegram.runtime import c, router
 from daily_flow.ui.telegram.render.сommon_mood_log import render_common_mood_log
 from daily_flow.ui.telegram.states import CommonMoodGetForm
-from daily_flow.ui.telegram.utils.date_selection import DATE_PATTERN, get_date_keyboard, DateAction
+from daily_flow.ui.telegram.utils.date_selection import get_date_keyboard, DateAction
+
 
 logger = logging.getLogger(__name__)
-
-
-@router.message(CommonMoodGetForm.waiting_for_date, F.text.regexp(DATE_PATTERN.pattern))
-async def get_common_mood_log_message(message: types.Message, state: FSMContext):
-    await perform_common_mood_log_get(message, message.text, state)
 
 async def perform_common_mood_log_get(message: types.Message, date_str: str, state: FSMContext):
     try:

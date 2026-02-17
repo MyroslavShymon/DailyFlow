@@ -1,3 +1,3 @@
 from . import upsert
 from . import get
-from . import tag
+from . import delete

@@ -6,6 +6,6 @@ common_mood_log_mapping = {
 
 tag_impact_mapping = {
     "day": "день",
-    "tag": "тег",
+    "tag": "чинник",
     "impact": "вплив",
 }
