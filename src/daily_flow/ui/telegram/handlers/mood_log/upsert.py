@@ -11,8 +11,15 @@ from daily_flow.ui.telegram.constants.mood_log import mood_log_mapping
 from daily_flow.ui.telegram.utils.date_parse import parse_to_date
 from daily_flow.ui.telegram.utils.errors import handle_message_error
 from daily_flow.ui.telegram.utils.form_render import get_form_keyboard
-from daily_flow.ui.telegram.utils.forms_state import TGForm, form_get, form_set_value, refresh_form_message, \
-    finish_text_input, form_set_last_msg, form_set_current_field
+from daily_flow.ui.telegram.utils.forms_state import (
+    TGForm,
+    form_get,
+    form_set_last_msg,
+    form_set_value,
+    form_set_current_field,
+    refresh_form_message,
+    finish_text_input,
+)
 
 logger = logging.getLogger(__name__)
 

@@ -64,7 +64,7 @@ async def delete_tag_impact(message: types.Message, state: FSMContext):
     await message.answer("Будь ласка, введи тег, який треба видалити:")
 
 @router.message(TagImpactDeleteForm.waiting_for_tag_name)
-async def delete_tag_impact_tag_input(message: types.Message, state: FSMContext):
+async def delete_tag_impact(message: types.Message, state: FSMContext):
     tag_to_delete = message.text.strip()
     await state.set_state(TagImpactDeleteForm.waiting_for_date)
     await message.answer(

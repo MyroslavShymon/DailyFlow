@@ -5,6 +5,7 @@ class MainMenu:
     BTN_COMMON_MOOD = "📝 З настроєм"
     BTN_MOOD = "❤️ З емоціями"
     BTN_IDEAS = "💡 З ідеями"
+    BTN_ACTIVITY = "🎯 З активностями"
     BTN_MENU = "🏠 Меню"
 
     @classmethod
@@ -13,6 +14,7 @@ class MainMenu:
         builder.button(text=cls.BTN_COMMON_MOOD)
         builder.button(text=cls.BTN_MOOD)
         builder.button(text=cls.BTN_IDEAS)
+        builder.button(text=cls.BTN_ACTIVITY)
         builder.button(text=cls.BTN_MENU)
-        builder.adjust(2, 1)
+        builder.adjust(2, 2, 1)
         return builder.as_markup(resize_keyboard=True)

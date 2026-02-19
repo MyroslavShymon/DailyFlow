@@ -93,6 +93,16 @@ class IdeaService:
         except (RepoError, SQLAlchemyError) as e:
             raise TemporaryError("Database error. Please try again.") from e
 
+    def delete_sphere_by_name(self, name: str) -> int:
+        name = (name or "").strip()
+        if not name:
+            raise UserInputError("Please provide a correct sphere name format")
+
+        try:
+            return self._repo.delete_sphere_by_name(name=name)
+        except (RepoError, SQLAlchemyError) as e:
+            raise TemporaryError("Database error. Please try again.") from e
+
     def get_ideas_by_sphere(self, sphere_id: int) -> list[Idea]:
         try:
             return self._repo.get_ideas_by_sphere(sphere_id)

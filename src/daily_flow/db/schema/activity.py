@@ -60,16 +60,16 @@ activity = Table(
         comment="When it fits: weekday | weekend | vacation | any."
     ),
     Column(
-        "duration_min_hours",
+        "duration_min_minutes",
         Integer,
         nullable=True,
-        comment="Minimum duration in hours (integer)."
+        comment="Minimum duration in minutes (integer)."
     ),
     Column(
-        "duration_max_hours",
+        "duration_max_minutes",
         Integer,
         nullable=True,
-        comment="Maximum duration in hours (integer)."
+        comment="Maximum duration in minutes (integer)."
     ),
     Column(
         "time_of_day",
@@ -174,15 +174,15 @@ activity = Table(
     ),
 
     CheckConstraint(
-        "duration_min_hours IS NULL OR duration_min_hours >= 0",
+        "duration_min_minutes IS NULL OR duration_min_minutes >= 0",
         name="ck_activity_duration_min_ge_0"
     ),
     CheckConstraint(
-        "duration_max_hours IS NULL OR duration_max_hours >= 0",
+        "duration_max_minutes IS NULL OR duration_max_minutes >= 0",
         name="ck_activity_duration_max_ge_0"
     ),
     CheckConstraint(
-        "(duration_min_hours IS NULL OR duration_max_hours IS NULL) OR duration_min_hours <= duration_max_hours",
+        "(duration_min_minutes IS NULL OR duration_max_minutes IS NULL) OR duration_min_minutes <= duration_max_minutes",
         name="ck_activity_duration_min_le_max"
     ),
 

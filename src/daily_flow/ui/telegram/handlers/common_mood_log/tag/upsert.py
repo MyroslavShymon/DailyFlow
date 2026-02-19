@@ -11,10 +11,16 @@ from daily_flow.ui.telegram.states import TagImpactForm
 from daily_flow.ui.telegram.utils.date_parse import parse_to_date
 from daily_flow.ui.telegram.utils.errors import handle_message_error
 from daily_flow.ui.telegram.utils.form_render import get_form_keyboard
-from daily_flow.ui.telegram.utils.forms_state import form_set_last_msg, TGForm, form_get, form_set_value, \
-    form_set_current_field, refresh_form_message, finish_text_input
 from daily_flow.ui.telegram.utils.keyboard import build_inline_keyboard
-
+from daily_flow.ui.telegram.utils.forms_state import (
+    TGForm,
+    form_get,
+    form_set_last_msg,
+    form_set_value,
+    form_set_current_field,
+    refresh_form_message,
+    finish_text_input,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -110,6 +116,7 @@ async def render_upsert_impact(state: FSMContext) -> str:
 
     impact_data = {tag: form["values"].get(tag, "—") for tag in tag_impact_mapping.keys()}
     day = form["values"].get("day", "—")
+
     text = f"📋 **Запис про вплив на настрій за {day}**\n\n" if day != "—" else "Запис про вплив на настрій за не вказаний день\n"
     text += "\n".join(f'{tag_impact_mapping.get(k).capitalize()}: {v}' for k ,v in impact_data.items())
 

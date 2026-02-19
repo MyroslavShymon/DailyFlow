@@ -225,6 +225,17 @@ class IdeaRepo:
             res: Result = conn.execute(stmt)
             return int(res.rowcount or 0)
 
+    def delete_sphere_by_name(self, name: str) -> int:
+        name = (name or "").strip()
+        if not name:
+            raise MissingRequiredFieldError("Name param is empty to delete.")
+
+        stmt = delete(sphere).where(sphere.c.name == name)
+
+        with self._engine.begin() as conn:
+            res: Result = conn.execute(stmt)
+            return int(res.rowcount or 0)
+
     def get_ideas_by_sphere(self, sphere_id: int) -> list[Idea]:
         stmt = (
             select(*idea.c)

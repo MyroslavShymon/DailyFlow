@@ -10,9 +10,16 @@ from daily_flow.ui.telegram.states import CommonMoodLogForm
 from daily_flow.ui.telegram.utils.date_parse import parse_to_date
 from daily_flow.ui.telegram.utils.errors import handle_message_error
 from daily_flow.ui.telegram.utils.form_render import get_form_keyboard
-from daily_flow.ui.telegram.utils.forms_state import form_get, TGForm, form_set_last_msg, form_set_value, \
-    form_set_current_field, refresh_form_message, finish_text_input
 from daily_flow.ui.telegram.utils.keyboard import build_inline_keyboard
+from daily_flow.ui.telegram.utils.forms_state import (
+    TGForm,
+    form_get,
+    form_set_last_msg,
+    form_set_value,
+    form_set_current_field,
+    refresh_form_message,
+    finish_text_input,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -103,6 +110,7 @@ async def process_common_mood_input(
 
 async def render_upsert_common_mood(state: FSMContext) -> str:
     form: TGForm = await form_get(state, COMMON_MOOD_LOG_FORM)
+
     common_mood_data = {mood: form["values"].get(mood, "—") for mood in common_mood_log_mapping.keys()}
 
     text = f"📋 **Запис про настрій за {common_mood_data.get('day')}**\n\n" if common_mood_data.get('day') != "—" else "Запис про настрій за не вказаний день\n"
