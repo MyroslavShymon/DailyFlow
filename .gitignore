@@ -6,7 +6,7 @@
 src/daily_flow/data/
 
 __pycache__/
-*.py[cod]
+*.pyc
 
 .vscode/
 .idea/

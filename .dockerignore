@@ -1,0 +1,15 @@
+.venv
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.git
+.idea
+.mypy_cache
+.ruff_cache
+.pytest_cache
+data/
+src/daily_flow/data/*.csv
+src/daily_flow/data/*.xlsx
+src/daily_flow/data/*.xls
+.env

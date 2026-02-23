@@ -1,0 +1,9 @@
+services:
+  bot:
+    build: .
+    env_file:
+      - .env
+    volumes:
+      - ./data:/data
+      - ./src/daily_flow/data:/app/src/daily_flow/data:ro
+    restart: unless-stopped
