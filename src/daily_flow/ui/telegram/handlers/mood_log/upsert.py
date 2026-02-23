@@ -5,7 +5,7 @@ from aiogram import types, F, Bot
 from aiogram.fsm.context import FSMContext
 
 from daily_flow.ui.telegram.keyboards.mood import MoodMenu
-from daily_flow.ui.telegram.runtime import router, dp
+from daily_flow.ui.telegram.runtime import router
 from daily_flow.ui.telegram.states import MoodLogForm
 from daily_flow.ui.telegram.constants.mood_log import mood_log_mapping
 from daily_flow.ui.telegram.utils.date_parse import parse_to_date

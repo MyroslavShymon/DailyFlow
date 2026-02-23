@@ -3,8 +3,8 @@ from dataclasses import dataclass
 from datetime import date, datetime
 from typing import Optional, Any, Mapping, TypedDict
 
-from sqlalchemy.engine import Engine, Result
-from sqlalchemy import select, delete, and_, func
+from sqlalchemy.ext.asyncio import AsyncEngine
+from sqlalchemy import select, delete, and_, func, CursorResult
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 
@@ -56,7 +56,7 @@ class BatchCommonMoodLogUpsertResult:
 
 
 class CommonMoodLogRepo:
-    def __init__(self, engine: Engine) -> None:
+    def __init__(self, engine: AsyncEngine) -> None:
         self._engine = engine
 
     @staticmethod
@@ -88,7 +88,7 @@ class CommonMoodLogRepo:
         if unknown_keys:
             raise UnknownFieldError(f"Unknown fields: {','.join(unknown_keys)}")
 
-    def upsert_common_mood_log_by_day(
+    async def upsert_common_mood_log_by_day(
             self,
             day: date,
             payload: dict[str, Any]
@@ -96,16 +96,16 @@ class CommonMoodLogRepo:
         self._common_mood_log_payload_validator(payload=payload)
 
         try:
-            with self._engine.begin() as conn:
+            async with self._engine.begin() as conn:
                 if "mood" in payload and payload["mood"] is not None:
                     mood = payload["mood"]
                     if not isinstance(mood, int) or not (1 <= mood <= 7):
                         raise InvalidScoreError("mood must be int between 1 and 7")
 
-                exists = conn.execute(
+                exists = (await conn.execute(
                     select(common_mood_log.c.id)
                     .where(common_mood_log.c.day == day)
-                ).first()
+                )).first()
 
                 if not exists and payload.get("mood") is None:
                     raise MissingRequiredFieldError("mood is required for the first insert")
@@ -120,7 +120,7 @@ class CommonMoodLogRepo:
                     .returning(*common_mood_log.c)
                 )
 
-                res: Result = conn.execute(stmt)
+                res = await conn.execute(stmt)
                 row = res.mappings().one()
                 return self._to_common_mood_log(row)
         except IntegrityError as e:
@@ -132,7 +132,7 @@ class CommonMoodLogRepo:
             )
             raise map_integrity_error(e, common_mood_log.name) from e
 
-    def batch_upsert_common_mood_logs(self, payload: list[DayPayload]) -> BatchCommonMoodLogUpsertResult:
+    async def batch_upsert_common_mood_logs(self, payload: list[DayPayload]) -> BatchCommonMoodLogUpsertResult:
         if not payload:
             return BatchCommonMoodLogUpsertResult(rows_in=0, rows_written=0, min_day=None, max_day=None)
 
@@ -163,8 +163,8 @@ class CommonMoodLogRepo:
         )
 
         try:
-            with self._engine.begin() as conn:
-                res: Result = conn.execute(upsert_stmt)
+            async with self._engine.begin() as conn:
+                res: CursorResult = await conn.execute(upsert_stmt)
                 rows_written = int(res.rowcount or 0)
 
                 return BatchCommonMoodLogUpsertResult(
@@ -183,20 +183,20 @@ class CommonMoodLogRepo:
             raise map_integrity_error(e, common_mood_log.name) from e
 
 
-    def get_common_mood_log_by_day(self, day: date) -> CommonMoodLog | None:
+    async def get_common_mood_log_by_day(self, day: date) -> CommonMoodLog | None:
         stmt = (
             select(*common_mood_log.c)
             .where(common_mood_log.c.day == day)
             .limit(1)
         )
 
-        with self._engine.connect() as conn:
-            res: Result = conn.execute(stmt)
+        async with self._engine.connect() as conn:
+            res = await conn.execute(stmt)
             row = res.mappings().one_or_none()
             return self._to_common_mood_log(row) if row else None
 
 
-    def upsert_tag_by_day(
+    async def upsert_tag_by_day(
             self,
             day: date,
             payload: dict[str, Any]
@@ -209,11 +209,11 @@ class CommonMoodLogRepo:
             raise UnknownFieldError(f"Unknown fields: {','.join(unknown_keys)}")
 
         try:
-            with self._engine.begin() as conn:
-                common_mood_id: int | None = conn.execute(
+            async with self._engine.begin() as conn:
+                common_mood_id: int | None = (await conn.execute(
                     select(common_mood_log.c.id)
                     .where(common_mood_log.c.day == day)
-                ).scalar()
+                )).scalar()
 
                 if not common_mood_id:
                     raise ParentNotFoundError(f"There is no common mood log in this day: {day}")
@@ -247,7 +247,7 @@ class CommonMoodLogRepo:
                     .returning(*mood_tag_impact.c)
                 )
 
-                res: Result = conn.execute(stmt)
+                res = await conn.execute(stmt)
                 raw = res.mappings().one()
                 return self._to_mood_tag_impact(raw)
         except IntegrityError as e:
@@ -260,12 +260,12 @@ class CommonMoodLogRepo:
             raise map_integrity_error(e, mood_tag_impact.name) from e
 
 
-    def get_tags_by_day(self, day: date) -> list[MoodTagImpact]:
-        with self._engine.connect() as conn:
-            common_mood_id: int | None = conn.execute(
+    async def get_tags_by_day(self, day: date) -> list[MoodTagImpact]:
+        async with self._engine.connect() as conn:
+            common_mood_id: int | None = (await conn.execute(
                 select(common_mood_log.c.id)
                 .where(common_mood_log.c.day == day)
-            ).scalar()
+            )).scalar()
 
             if not common_mood_id:
                 return []
@@ -276,21 +276,21 @@ class CommonMoodLogRepo:
                 .order_by(mood_tag_impact.c.tag)
             )
 
-            res: Result = conn.execute(stmt)
+            res = await conn.execute(stmt)
             rows = res.mappings().all()
             return [self._to_mood_tag_impact(row) for row in rows]
 
 
-    def delete_tag_by_day(self, day: date, tag: str) -> int:
+    async def delete_tag_by_day(self, day: date, tag: str) -> int:
         tag = tag.strip().lower()
         if not tag:
             raise MissingRequiredFieldError("tag is required")
 
-        with self._engine.begin() as conn:
-            common_mood_id: int | None = conn.execute(
+        async with self._engine.begin() as conn:
+            common_mood_id: int | None = (await conn.execute(
                 select(common_mood_log.c.id)
                 .where(common_mood_log.c.day == day)
-            ).scalar()
+            )).scalar()
 
             if not common_mood_id:
                 raise ParentNotFoundError(f"There is no common mood log in this day: {day}")
@@ -305,18 +305,18 @@ class CommonMoodLogRepo:
                 )
             )
 
-            res: Result = conn.execute(stmt)
+            res: CursorResult = await conn.execute(stmt)
             return int(res.rowcount or 0)
 
 
-    def get_all_unique_tags(self) -> list[str]:
-        with self._engine.connect() as conn:
+    async def get_all_unique_tags(self) -> list[str]:
+        async with self._engine.connect() as conn:
             stmt = (
                 select(mood_tag_impact.c.tag)
                 .distinct()
                 .order_by(mood_tag_impact.c.tag)
             )
 
-            res = conn.execute(stmt)
+            res = await conn.execute(stmt)
             rows = res.scalars().all()
             return [str(row) for row in rows]

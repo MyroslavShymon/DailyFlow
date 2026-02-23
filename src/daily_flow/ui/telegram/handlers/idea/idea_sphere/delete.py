@@ -1,14 +1,14 @@
-import asyncio
 import logging
 
 from aiogram import types, F
 from aiogram.fsm.context import FSMContext
 
+from daily_flow.app.container import Container
 from daily_flow.services.idea.dto import SphereToIdeaDTO
 from daily_flow.ui.telegram.handlers.idea.get import get_all_ideas_text
 from daily_flow.ui.telegram.handlers.idea.sphere.get import get_all_spheres_text
 from daily_flow.ui.telegram.keyboards.idea import IdeaMenu
-from daily_flow.ui.telegram.runtime import c, router
+from daily_flow.ui.telegram.runtime import router
 from daily_flow.ui.telegram.states import SphereToIdeaDeleteForm
 
 logger = logging.getLogger(__name__)
@@ -17,10 +17,10 @@ KEY_IDEA_ID = "idea_id_for_delete"
 
 
 @router.message(F.text == IdeaMenu.BTN_DELETE_SPHERE_FROM_IDEA)
-async def delete_sphere_from_idea(message: types.Message, state: FSMContext):
+async def delete_sphere_from_idea(message: types.Message, state: FSMContext, db_container: Container):
     await state.set_state(SphereToIdeaDeleteForm.waiting_for_idea_id)
 
-    ideas_text = await get_all_ideas_text()
+    ideas_text = await get_all_ideas_text(db_container)
 
     await message.answer(
         "Введи **ID ідеї**, з якої треба прибрати сферу:\n\n"
@@ -31,7 +31,7 @@ async def delete_sphere_from_idea(message: types.Message, state: FSMContext):
 
 
 @router.message(SphereToIdeaDeleteForm.waiting_for_idea_id)
-async def delete_sphere_from_idea_step1(message: types.Message, state: FSMContext):
+async def delete_sphere_from_idea_step1(message: types.Message, state: FSMContext, db_container: Container):
     raw = (message.text or "").strip()
 
     try:
@@ -42,7 +42,7 @@ async def delete_sphere_from_idea_step1(message: types.Message, state: FSMContex
     await state.update_data({KEY_IDEA_ID: idea_id})
     await state.set_state(SphereToIdeaDeleteForm.waiting_for_sphere_id)
 
-    spheres_text = await get_all_spheres_text()
+    spheres_text = await get_all_spheres_text(db_container)
 
     await message.answer(
         "Тепер введи **ID сфери**, яку треба прибрати з цієї ідеї:\n\n"
@@ -53,7 +53,7 @@ async def delete_sphere_from_idea_step1(message: types.Message, state: FSMContex
 
 
 @router.message(SphereToIdeaDeleteForm.waiting_for_sphere_id)
-async def delete_sphere_from_idea_step2(message: types.Message, state: FSMContext):
+async def delete_sphere_from_idea_step2(message: types.Message, state: FSMContext, db_container: Container):
     data = await state.get_data()
     idea_id = data.get(KEY_IDEA_ID)
 
@@ -66,7 +66,7 @@ async def delete_sphere_from_idea_step2(message: types.Message, state: FSMContex
 
     try:
         dto = SphereToIdeaDTO(sphere_id=sphere_id, idea_id=idea_id)
-        deleted_count = await asyncio.to_thread(c.idea_service.delete_sphere_from_idea, dto)
+        deleted_count = await db_container.idea_service.delete_sphere_from_idea(dto)
 
         await state.clear()
 

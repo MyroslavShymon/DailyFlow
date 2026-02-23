@@ -3,8 +3,8 @@ from dataclasses import dataclass
 from datetime import datetime, date
 from typing import Optional, Any, Mapping, TypedDict
 
-from sqlalchemy.engine import Engine, Result
-from sqlalchemy import select, delete, func
+from sqlalchemy.ext.asyncio import AsyncEngine
+from sqlalchemy import select, delete, func, CursorResult
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 
@@ -60,7 +60,7 @@ class BatchMoodLogUpsertResult:
     max_day: date | None
 
 class MoodLogRepo:
-    def __init__(self, engine: Engine) -> None:
+    def __init__(self, engine: AsyncEngine) -> None:
         self._engine = engine
 
     @staticmethod
@@ -92,7 +92,7 @@ class MoodLogRepo:
         if unknown_keys:
             raise UnknownFieldError(f"Unknown fields: {','.join(unknown_keys)}")
 
-    def upsert_mood_log_by_day(
+    async def upsert_mood_log_by_day(
             self,
             day: date,
             values: dict[str, int | None],
@@ -110,8 +110,8 @@ class MoodLogRepo:
         )
 
         try:
-            with self._engine.begin() as conn:
-                res: Result = conn.execute(stmt)
+            async with self._engine.begin() as conn:
+                res = await conn.execute(stmt)
                 row = res.mappings().one()
                 return self._to_mood_log(row)
         except IntegrityError as e:
@@ -123,7 +123,7 @@ class MoodLogRepo:
             )
             raise map_integrity_error(e, mood_log.name) from e
 
-    def batch_upsert_mood_logs(self, payload: list[DayPayload]) -> BatchMoodLogUpsertResult:
+    async def batch_upsert_mood_logs(self, payload: list[DayPayload]) -> BatchMoodLogUpsertResult:
         if not payload:
             return BatchMoodLogUpsertResult(rows_in=0, rows_written=0, min_day=None, max_day=None)
 
@@ -154,8 +154,8 @@ class MoodLogRepo:
         )
 
         try:
-            with self._engine.begin() as conn:
-                res: Result = conn.execute(upsert_stmt)
+            async with self._engine.begin() as conn:
+                res: CursorResult = await conn.execute(upsert_stmt)
                 rows_written = int(res.rowcount or 0)
 
                 return BatchMoodLogUpsertResult(
@@ -173,36 +173,36 @@ class MoodLogRepo:
             )
             raise map_integrity_error(e, mood_log.name) from e
 
-    def get_mood_log_by_day(self, day: date) -> MoodLog | None:
+    async def get_mood_log_by_day(self, day: date) -> MoodLog | None:
         stmt = (
             select(*mood_log.c)
             .where(mood_log.c.day == day)
             .limit(1)
         )
 
-        with self._engine.connect() as conn:
-            res: Result = conn.execute(stmt)
+        async with self._engine.connect() as conn:
+            res = await conn.execute(stmt)
             row = res.mappings().one_or_none()
             return self._to_mood_log(row) if row else None
 
-    def list_by_date_range(self, start: date, end: date) -> list[MoodLog]:
+    async def list_by_date_range(self, start: date, end: date) -> list[MoodLog]:
         stmt = (
             select(*mood_log.c)
             .where(mood_log.c.day.between(start, end))
             .order_by(mood_log.c.day.asc())
         )
 
-        with self._engine.connect() as conn:
-            res: Result = conn.execute(stmt)
+        async with self._engine.connect() as conn:
+            res = await conn.execute(stmt)
             rows = res.mappings().all()
             return [self._to_mood_log(row) for row in rows]
 
-    def delete_mood_log_by_day(self, day: date) -> int:
+    async def delete_mood_log_by_day(self, day: date) -> int:
         stmt = (
             delete(mood_log)
             .where(mood_log.c.day == day)
         )
 
-        with self._engine.begin() as conn:
-            res: Result = conn.execute(stmt)
+        async with self._engine.begin() as conn:
+            res: CursorResult = await conn.execute(stmt)
             return int(res.rowcount or 0)

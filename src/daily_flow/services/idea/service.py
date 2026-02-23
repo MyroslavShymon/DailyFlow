@@ -13,14 +13,14 @@ class IdeaService:
     def __init__(self, repo: IdeaRepo) -> None:
         self._repo = repo
 
-    def upsert_sphere(self, dto: UpsertSphereDTO) -> Sphere:
+    async def upsert_sphere(self, dto: UpsertSphereDTO) -> Sphere:
         payload = dto.model_dump(exclude_none=True)
 
         name = payload.pop("name")
         description = payload.pop("description", None)
 
         try:
-            sphere = self._repo.upsert_sphere(
+            sphere = await self._repo.upsert_sphere(
                 name=name,
                 description=description
             )
@@ -37,14 +37,14 @@ class IdeaService:
             )
             raise TemporaryError("Database error. Please try again.") from e
 
-    def upsert_idea(self, dto: UpsertIdeaDTO) -> Idea:
+    async def upsert_idea(self, dto: UpsertIdeaDTO) -> Idea:
         payload = dto.model_dump(exclude_none=True)
 
         title = payload.pop("title")
         values = payload
 
         try:
-            idea = self._repo.upsert_idea(
+            idea = await self._repo.upsert_idea(
                 title=title,
                 payload=values
             )
@@ -60,10 +60,10 @@ class IdeaService:
             )
             raise TemporaryError("Database error. Please try again.") from e
 
-    def assign_sphere_to_idea(self, dto: SphereToIdeaDTO) -> bool:
+    async def assign_sphere_to_idea(self, dto: SphereToIdeaDTO) -> bool:
         sphere_id, idea_id = dto.sphere_id, dto.idea_id
         try:
-            return self._repo.assign_sphere_to_idea(sphere_id=sphere_id, idea_id=idea_id)
+            return await self._repo.assign_sphere_to_idea(sphere_id=sphere_id, idea_id=idea_id)
         except ParentNotFoundError as e:
             raise UserInputError(str(e)) from e
         except (DBIntegrityError, RepoError) as e:
@@ -74,50 +74,50 @@ class IdeaService:
             )
             raise TemporaryError("Database error. Please try again.") from e
 
-    def delete_idea_by_title(self, title: str) -> int:
+    async def delete_idea_by_title(self, title: str) -> int:
         title = (title or "").strip()
         if not title:
             raise UserInputError("Please provide a correct title format")
 
         try:
-            return self._repo.delete_idea_by_title(title=title)
+            return await self._repo.delete_idea_by_title(title=title)
         except (RepoError, SQLAlchemyError) as e:
             raise TemporaryError("Database error. Please try again.") from e
 
-    def delete_sphere_from_idea(self, dto: SphereToIdeaDTO) -> int:
+    async def delete_sphere_from_idea(self, dto: SphereToIdeaDTO) -> int:
         sphere_id, idea_id = dto.sphere_id, dto.idea_id
         try:
-            return self._repo.delete_sphere_from_idea(idea_id=idea_id, sphere_id=sphere_id)
+            return await self._repo.delete_sphere_from_idea(idea_id=idea_id, sphere_id=sphere_id)
         except ParentNotFoundError as e:
             raise UserInputError(str(e)) from e
         except (RepoError, SQLAlchemyError) as e:
             raise TemporaryError("Database error. Please try again.") from e
 
-    def delete_sphere_by_name(self, name: str) -> int:
+    async def delete_sphere_by_name(self, name: str) -> int:
         name = (name or "").strip()
         if not name:
             raise UserInputError("Please provide a correct sphere name format")
 
         try:
-            return self._repo.delete_sphere_by_name(name=name)
+            return await self._repo.delete_sphere_by_name(name=name)
         except (RepoError, SQLAlchemyError) as e:
             raise TemporaryError("Database error. Please try again.") from e
 
-    def get_ideas_by_sphere(self, sphere_id: int) -> list[Idea]:
+    async def get_ideas_by_sphere(self, sphere_id: int) -> list[Idea]:
         try:
-            return self._repo.get_ideas_by_sphere(sphere_id)
+            return await self._repo.get_ideas_by_sphere(sphere_id)
         except (RepoError, SQLAlchemyError) as e:
             raise TemporaryError("Database error. Please try again.") from e
 
-    def get_all_ideas(self) -> list[Idea]:
+    async def get_all_ideas(self) -> list[Idea]:
         try:
-            return self._repo.get_all_ideas()
+            return await self._repo.get_all_ideas()
         except (RepoError, SQLAlchemyError) as e:
             raise TemporaryError("Database error. Please try again.") from e
 
 
-    def get_all_spheres(self) -> list[Sphere]:
+    async def get_all_spheres(self) -> list[Sphere]:
         try:
-            return self._repo.get_all_spheres()
+            return await self._repo.get_all_spheres()
         except (RepoError, SQLAlchemyError) as e:
             raise TemporaryError("Database error. Please try again.") from e

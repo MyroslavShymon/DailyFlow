@@ -1,20 +1,20 @@
-import asyncio
 import logging
 
 from aiogram import types, F
 from aiogram.fsm.context import FSMContext
 
+from daily_flow.app.container import Container
 from daily_flow.ui.telegram.keyboards.idea import IdeaMenu
 from daily_flow.ui.telegram.render.idea import render_idea
-from daily_flow.ui.telegram.runtime import c, router
+from daily_flow.ui.telegram.runtime import router
 from daily_flow.ui.telegram.states import IdeaBySphereGetForm
 from daily_flow.ui.telegram.handlers.idea.sphere.get import get_all_spheres_text
 
 
 logger = logging.getLogger(__name__)
 
-async def get_all_ideas_text() -> str:
-    ideas = await asyncio.to_thread(c.idea_service.get_all_ideas)
+async def get_all_ideas_text(db_container: Container) -> str:
+    ideas = await db_container.idea_service.get_all_ideas()
 
     if not ideas:
         return "💡 Поки що немає жодної ідеї.\n\nСтвори першу через «✨ Додати/оновити ідею»."
@@ -28,9 +28,9 @@ async def get_all_ideas_text() -> str:
 
 
 @router.message(F.text == IdeaMenu.BTN_GET_ALL_IDEAS)
-async def get_all_ideas(message: types.Message):
+async def get_all_ideas(message: types.Message, db_container: Container):
     try:
-        text = await get_all_ideas_text()
+        text = await get_all_ideas_text(db_container)
         await message.answer(text, reply_markup=IdeaMenu.get(), parse_mode="Markdown")
     except Exception as e:
         logger.exception("Idea get_all_ideas failed: %s", e)
@@ -38,10 +38,10 @@ async def get_all_ideas(message: types.Message):
 
 
 @router.message(F.text == IdeaMenu.BTN_IDEAS_BY_SPHERE)
-async def ask_sphere_id_for_ideas(message: types.Message, state: FSMContext):
+async def ask_sphere_id_for_ideas(message: types.Message, state: FSMContext, db_container: Container):
     await state.set_state(IdeaBySphereGetForm.waiting_for_sphere_id)
 
-    spheres_text = await get_all_spheres_text()
+    spheres_text = await get_all_spheres_text(db_container)
 
     await message.answer(
         "Введи **ID сфери**, щоб показати ідеї в ній.\n\n"
@@ -52,7 +52,7 @@ async def ask_sphere_id_for_ideas(message: types.Message, state: FSMContext):
 
 
 @router.message(IdeaBySphereGetForm.waiting_for_sphere_id)
-async def show_ideas_by_sphere(message: types.Message, state: FSMContext):
+async def show_ideas_by_sphere(message: types.Message, state: FSMContext, db_container: Container):
     raw = (message.text or "").strip()
 
     try:
@@ -61,7 +61,7 @@ async def show_ideas_by_sphere(message: types.Message, state: FSMContext):
         return await message.answer("❌ ID сфери має бути числом. Спробуй ще раз:")
 
     try:
-        ideas = await asyncio.to_thread(c.idea_service.get_ideas_by_sphere, sphere_id)
+        ideas = await db_container.idea_service.get_ideas_by_sphere(sphere_id)
 
         await state.clear()
 

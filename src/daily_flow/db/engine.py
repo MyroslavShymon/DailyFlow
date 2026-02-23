@@ -1,14 +1,14 @@
 import logging
 
-from sqlalchemy import create_engine, event
-from sqlalchemy.engine import Engine
+from sqlalchemy import event
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncEngine
 
 logger = logging.getLogger(__name__)
 
-def build_engine(database_url: str, is_database_echo: bool) -> Engine:
+def build_engine(database_url: str, is_database_echo: bool) -> AsyncEngine:
     logger.info("DATABASE_URL=%s", database_url)
 
-    engine = create_engine(
+    engine = create_async_engine(
         database_url,
         connect_args={"check_same_thread": False},
         echo=is_database_echo, #виключити ближче ддо деплою

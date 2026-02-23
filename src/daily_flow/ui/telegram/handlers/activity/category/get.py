@@ -1,18 +1,18 @@
-import asyncio
 import logging
 
 from aiogram import types, F
 
+from daily_flow.app.container import Container
 from daily_flow.ui.telegram.keyboards.activity import ActivityMenu
 from daily_flow.ui.telegram.render.activity import render_category_compact
-from daily_flow.ui.telegram.runtime import c, router
+from daily_flow.ui.telegram.runtime import router
 from daily_flow.ui.telegram.utils.truncate_text import truncate_text
 
 
 logger = logging.getLogger(__name__)
 
-async def get_all_categories_text() -> str:
-    categories = await asyncio.to_thread(c.category_service.get_all_categories)
+async def get_all_categories_text(db_container: Container) -> str:
+    categories = await db_container.category_service.get_all_categories()
 
     if not categories:
         return "🏷️ Поки що немає жодної категорії."
@@ -23,9 +23,9 @@ async def get_all_categories_text() -> str:
 
 
 @router.message(F.text == ActivityMenu.BTN_GET_ALL_CATEGORIES)
-async def get_all_categories(message: types.Message):
+async def get_all_categories(message: types.Message, db_container: Container):
     try:
-        text = await get_all_categories_text()
+        text = await get_all_categories_text(db_container)
         await message.answer(text, reply_markup=ActivityMenu.get(), parse_mode="Markdown")
     except Exception as e:
         logger.exception("Category get_all_categories failed: %s", e)

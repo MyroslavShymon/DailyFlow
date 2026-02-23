@@ -4,8 +4,9 @@ import logging
 from aiogram import types, F
 from aiogram.fsm.context import FSMContext
 
+from daily_flow.app.container import Container
 from daily_flow.ui.telegram.keyboards.activity import ActivityMenu
-from daily_flow.ui.telegram.runtime import c, router
+from daily_flow.ui.telegram.runtime import router
 from daily_flow.ui.telegram.states import ActivityUsageDeleteForm, ActivityUsageDeleteByActivityForm
 
 logger = logging.getLogger(__name__)
@@ -16,7 +17,7 @@ async def delete_usage(message: types.Message, state: FSMContext):
     await message.answer("Введи **Usage ID**, який треба видалити:", reply_markup=ActivityMenu.get(), parse_mode="Markdown")
 
 @router.message(ActivityUsageDeleteForm.waiting_for_usage_id)
-async def perform_delete_usage(message: types.Message, state: FSMContext):
+async def perform_delete_usage(message: types.Message, state: FSMContext, db_container: Container):
     raw = (message.text or "").strip()
     try:
         usage_id = int(raw)
@@ -24,7 +25,7 @@ async def perform_delete_usage(message: types.Message, state: FSMContext):
         return await message.answer("❌ Usage ID має бути числом. Спробуй ще раз:")
 
     try:
-        deleted = await asyncio.to_thread(c.activity_usage_service.delete_activity_usage_by_id, usage_id)
+        deleted = await db_container.activity_usage_service.delete_activity_usage_by_id(usage_id)
         await state.clear()
 
         if deleted > 0:
@@ -43,7 +44,7 @@ async def delete_usages_by_activity(message: types.Message, state: FSMContext):
     await message.answer("Введи **Activity ID**, для якого треба очистити історію:", reply_markup=ActivityMenu.get(), parse_mode="Markdown")
 
 @router.message(ActivityUsageDeleteByActivityForm.waiting_for_activity_id)
-async def perform_delete_usages_by_activity(message: types.Message, state: FSMContext):
+async def perform_delete_usages_by_activity(message: types.Message, state: FSMContext, db_container: Container):
     raw = (message.text or "").strip()
     try:
         activity_id = int(raw)
@@ -51,7 +52,7 @@ async def perform_delete_usages_by_activity(message: types.Message, state: FSMCo
         return await message.answer("❌ Activity ID має бути числом. Спробуй ще раз:")
 
     try:
-        deleted = await asyncio.to_thread(c.activity_usage_service.delete_activity_usages_by_activity, activity_id)
+        deleted = await db_container.activity_usage_service.delete_activity_usages_by_activity(activity_id)
         await state.clear()
 
         if deleted > 0:

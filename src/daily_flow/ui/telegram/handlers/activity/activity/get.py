@@ -1,20 +1,20 @@
-import asyncio
 import logging
 
 from aiogram import types, F
 from aiogram.fsm.context import FSMContext
 
+from daily_flow.app.container import Container
 from daily_flow.ui.telegram.keyboards.activity import ActivityMenu
 from daily_flow.ui.telegram.render.activity import render_activity_compact, render_activity
-from daily_flow.ui.telegram.runtime import c, router
+from daily_flow.ui.telegram.runtime import router
 from daily_flow.ui.telegram.states import ActivityGetForm, ActivityByCategoryGetForm
 from daily_flow.ui.telegram.handlers.activity.category.get import get_all_categories_text
 from daily_flow.ui.telegram.utils.truncate_text import truncate_text
 
 logger = logging.getLogger(__name__)
 
-async def get_all_activities_text() -> str:
-    activities = await asyncio.to_thread(c.activity_service.get_all_activities)
+async def get_all_activities_text(db_container: Container) -> str:
+    activities = await db_container.activity_service.get_all_activities()
 
     if not activities:
         return "🎯 Поки що немає жодної активності."
@@ -25,9 +25,9 @@ async def get_all_activities_text() -> str:
 
 
 @router.message(F.text == ActivityMenu.BTN_GET_ALL_ACTIVITIES)
-async def get_all_activities(message: types.Message):
+async def get_all_activities(message: types.Message, db_container: Container):
     try:
-        text = await get_all_activities_text()
+        text = await get_all_activities_text(db_container)
         await message.answer(text, reply_markup=ActivityMenu.get(), parse_mode="Markdown")
     except Exception as e:
         logger.exception("Activity get_all_activities failed: %s", e)
@@ -35,10 +35,10 @@ async def get_all_activities(message: types.Message):
 
 
 @router.message(F.text == ActivityMenu.BTN_GET_ACTIVITY)
-async def ask_activity_ref(message: types.Message, state: FSMContext):
+async def ask_activity_ref(message: types.Message, state: FSMContext, db_container: Container):
     await state.set_state(ActivityGetForm.waiting_for_ref)
 
-    activities_text = await get_all_activities_text()
+    activities_text = await get_all_activities_text(db_container)
 
     await message.answer(
         "Введи **ID** або **назву (title)** активності.\n\n"
@@ -49,7 +49,7 @@ async def ask_activity_ref(message: types.Message, state: FSMContext):
 
 
 @router.message(ActivityGetForm.waiting_for_ref)
-async def perform_get_activity(message: types.Message, state: FSMContext):
+async def perform_get_activity(message: types.Message, state: FSMContext, db_container: Container):
     ref = (message.text or "").strip()
     if not ref:
         return await message.answer("❌ Введи ID або title ще раз:")
@@ -57,9 +57,9 @@ async def perform_get_activity(message: types.Message, state: FSMContext):
     try:
         if ref.isdigit():
             activity_id = int(ref)
-            activity = await asyncio.to_thread(c.activity_service.get_activity_by_id, activity_id)
+            activity = await db_container.activity_service.get_activity_by_id(activity_id)
         else:
-            activity = await asyncio.to_thread(c.activity_service.get_activity_by_title, ref)
+            activity = await db_container.activity_service.get_activity_by_title(ref)
 
         await state.clear()
 
@@ -75,10 +75,10 @@ async def perform_get_activity(message: types.Message, state: FSMContext):
 
 
 @router.message(F.text == ActivityMenu.BTN_GET_ACTIVITIES_BY_CATEGORY)
-async def ask_category_for_activities(message: types.Message, state: FSMContext):
+async def ask_category_for_activities(message: types.Message, state: FSMContext, db_container: Container):
     await state.set_state(ActivityByCategoryGetForm.waiting_for_category_id)
 
-    categories_text = await get_all_categories_text()
+    categories_text = await get_all_categories_text(db_container)
 
     await message.answer(
         "Введи **ID категорії**, щоб показати активності в ній.\n\n"
@@ -89,7 +89,7 @@ async def ask_category_for_activities(message: types.Message, state: FSMContext)
 
 
 @router.message(ActivityByCategoryGetForm.waiting_for_category_id)
-async def perform_get_activities_by_category(message: types.Message, state: FSMContext):
+async def perform_get_activities_by_category(message: types.Message, state: FSMContext, db_container: Container):
     raw = (message.text or "").strip()
 
     try:
@@ -98,7 +98,7 @@ async def perform_get_activities_by_category(message: types.Message, state: FSMC
         return await message.answer("❌ ID категорії має бути числом. Спробуй ще раз:")
 
     try:
-        activities = await asyncio.to_thread(c.activity_service.get_activities_by_category, category_id)
+        activities = await db_container.activity_service.get_activities_by_category(category_id)
 
         await state.clear()
 

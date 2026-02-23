@@ -3,10 +3,10 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Optional, Any, Mapping
 
-from sqlalchemy.engine import Engine, Result
+from sqlalchemy.ext.asyncio import AsyncEngine
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
-from sqlalchemy import select, delete, exists, and_
+from sqlalchemy import select, delete, exists, and_, CursorResult
 
 from daily_flow.db.errors import (
     map_integrity_error,
@@ -50,7 +50,7 @@ class ActivityUsage:
 
 
 class ActivityUsageRepo:
-    def __init__(self, engine: Engine) -> None:
+    def __init__(self, engine: AsyncEngine) -> None:
         self._engine = engine
 
     @staticmethod
@@ -100,14 +100,14 @@ class ActivityUsageRepo:
             raise MissingRequiredFieldError("energy_before is required when energy_after provided")
 
     @staticmethod
-    def _assert_activity_exists(conn, activity_id: int) -> None:
-        ok = conn.execute(
+    async def _assert_activity_exists(conn, activity_id: int) -> None:
+        ok = (await conn.execute(
             select(exists().where(activity.c.id == activity_id))
-        ).scalar()
+        )).scalar()
         if not ok:
             raise ParentNotFoundError("There is no activity entity with such id")
 
-    def upsert_activity_usage(
+    async def upsert_activity_usage(
         self,
         activity_id: int,
         used_at: datetime,
@@ -134,8 +134,8 @@ class ActivityUsageRepo:
         self._validate_before_after(payload)
 
         try:
-            with self._engine.begin() as conn:
-                self._assert_activity_exists(conn, activity_id)
+            async with self._engine.begin() as conn:
+                await self._assert_activity_exists(conn, activity_id)
 
                 base_values = {"activity_id": activity_id, "used_at": used_at}
                 insert_values = {**base_values, **payload}
@@ -146,7 +146,7 @@ class ActivityUsageRepo:
                         .values(**insert_values)
                         .returning(*activity_usage.c)
                     )
-                    res: Result = conn.execute(stmt)
+                    res = await conn.execute(stmt)
                     row = res.mappings().one()
                     return self._to_activity_usage(row)
 
@@ -164,7 +164,7 @@ class ActivityUsageRepo:
                     .returning(*activity_usage.c)
                 )
 
-                res2: Result = conn.execute(stmt)
+                res2 = await conn.execute(stmt)
                 row2 = res2.mappings().one()
                 return self._to_activity_usage(row2)
 
@@ -179,47 +179,47 @@ class ActivityUsageRepo:
             )
             raise map_integrity_error(e, activity_usage.name) from e
 
-    def delete_activity_usage_by_id(self, usage_id: int) -> int:
+    async def delete_activity_usage_by_id(self, usage_id: int) -> int:
         if not usage_id:
             raise MissingRequiredFieldError("usage_id is required")
 
         stmt = delete(activity_usage).where(activity_usage.c.id == usage_id)
 
-        with self._engine.begin() as conn:
-            res: Result = conn.execute(stmt)
+        async with self._engine.begin() as conn:
+            res: CursorResult = await conn.execute(stmt)
             return int(res.rowcount or 0)
 
-    def delete_activity_usages_by_activity(self, activity_id: int) -> int:
+    async def delete_activity_usages_by_activity(self, activity_id: int) -> int:
         if not activity_id:
             raise MissingRequiredFieldError("activity_id is required")
 
         stmt = delete(activity_usage).where(activity_usage.c.activity_id == activity_id)
 
-        with self._engine.begin() as conn:
-            res: Result = conn.execute(stmt)
+        async with self._engine.begin() as conn:
+            res: CursorResult = await conn.execute(stmt)
             return int(res.rowcount or 0)
 
-    def get_activity_usage_by_id(self, usage_id: int) -> ActivityUsage | None:
+    async def get_activity_usage_by_id(self, usage_id: int) -> ActivityUsage | None:
         stmt = select(*activity_usage.c).where(activity_usage.c.id == usage_id).limit(1)
 
-        with self._engine.connect() as conn:
-            res: Result = conn.execute(stmt)
+        async with self._engine.connect() as conn:
+            res = await conn.execute(stmt)
             row = res.mappings().one_or_none()
             return self._to_activity_usage(row) if row else None
 
-    def get_activity_usages_by_activity(self, activity_id: int) -> list[ActivityUsage]:
+    async def get_activity_usages_by_activity(self, activity_id: int) -> list[ActivityUsage]:
         stmt = (
             select(*activity_usage.c)
             .where(activity_usage.c.activity_id == activity_id)
             .order_by(activity_usage.c.used_at.desc())
         )
 
-        with self._engine.connect() as conn:
-            res: Result = conn.execute(stmt)
+        async with self._engine.connect() as conn:
+            res = await conn.execute(stmt)
             rows = res.mappings().all()
             return [self._to_activity_usage(row) for row in rows]
 
-    def get_activity_usages_by_period(self, date_from: datetime, date_to: datetime) -> list[ActivityUsage]:
+    async def get_activity_usages_by_period(self, date_from: datetime, date_to: datetime) -> list[ActivityUsage]:
         if not date_from or not date_to:
             raise MissingRequiredFieldError("date_from and date_to are required")
 
@@ -234,18 +234,18 @@ class ActivityUsageRepo:
             .order_by(activity_usage.c.used_at.desc())
         )
 
-        with self._engine.connect() as conn:
-            res: Result = conn.execute(stmt)
+        async with self._engine.connect() as conn:
+            res = await conn.execute(stmt)
             rows = res.mappings().all()
             return [self._to_activity_usage(row) for row in rows]
 
-    def get_last_activity_usages(self, limit: int) -> list[ActivityUsage]:
+    async def get_last_activity_usages(self, limit: int) -> list[ActivityUsage]:
         if not limit or limit <= 0:
             raise MissingRequiredFieldError("limit must be > 0")
 
         stmt = select(*activity_usage.c).order_by(activity_usage.c.used_at.desc()).limit(limit)
 
-        with self._engine.connect() as conn:
-            res: Result = conn.execute(stmt)
+        async with self._engine.connect() as conn:
+            res = await conn.execute(stmt)
             rows = res.mappings().all()
             return [self._to_activity_usage(row) for row in rows]

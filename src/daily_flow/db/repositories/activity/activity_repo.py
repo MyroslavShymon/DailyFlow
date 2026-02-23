@@ -2,10 +2,10 @@ import logging
 from dataclasses import dataclass
 from typing import Optional, Any, Mapping
 
-from sqlalchemy.engine import Engine, Result
+from sqlalchemy.ext.asyncio import AsyncEngine
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
-from sqlalchemy import select, delete, update, and_
+from sqlalchemy import select, delete, update, CursorResult
 
 from daily_flow.db.errors import map_integrity_error, MissingRequiredFieldError, UnknownFieldError
 from daily_flow.db.schema import activity, category_activity
@@ -63,7 +63,7 @@ class Activity:
 
 
 class ActivityRepo:
-    def __init__(self, engine: Engine) -> None:
+    def __init__(self, engine: AsyncEngine) -> None:
         self._engine = engine
 
     @staticmethod
@@ -101,7 +101,7 @@ class ActivityRepo:
         if unknown_keys:
             raise UnknownFieldError(f"Unknown fields: {','.join(sorted(unknown_keys))}")
 
-    def upsert_activity(self, title: str, payload: dict[str, Any]) -> Activity:
+    async def upsert_activity(self, title: str, payload: dict[str, Any]) -> Activity:
         title = (title or "").strip()
         if not title:
             raise MissingRequiredFieldError("Invalid format error for title field")
@@ -112,12 +112,12 @@ class ActivityRepo:
         fields_to_update = {k: v for k, v in payload.items() if v is not None}
 
         try:
-            with self._engine.begin() as conn:
-                activity_id: int | None = conn.execute(
+            async with self._engine.begin() as conn:
+                activity_id: int | None = (await conn.execute(
                     select(activity.c.id)
                     .where(activity.c.title == title)
                     .limit(1)
-                ).scalar()
+                )).scalar()
 
                 if activity_id is None:
                     stmt = (
@@ -125,7 +125,7 @@ class ActivityRepo:
                         .values(title=title, **payload)
                         .returning(*activity.c)
                     )
-                    res: Result = conn.execute(stmt)
+                    res = await conn.execute(stmt)
                     row = res.mappings().one()
                     return self._to_activity(row)
 
@@ -136,13 +136,14 @@ class ActivityRepo:
                         .values(**fields_to_update)
                         .returning(*activity.c)
                     )
-                    res: Result = conn.execute(stmt)
+                    res = await conn.execute(stmt)
                     row = res.mappings().one()
                     return self._to_activity(row)
 
-                row = conn.execute(
-                    select(*activity.c).where(activity.c.id == activity_id)
-                ).mappings().one()
+                res = await conn.execute(
+                    select(*activity.c).where(activity.c.id == activity_id).limit(1)
+                )
+                row = res.mappings().one()
                 return self._to_activity(row)
 
         except IntegrityError as e:
@@ -153,56 +154,56 @@ class ActivityRepo:
             )
             raise map_integrity_error(e, activity.name) from e
 
-    def delete_activity_by_title(self, title: str) -> int:
+    async def delete_activity_by_title(self, title: str) -> int:
         title = (title or "").strip()
         if not title:
             raise MissingRequiredFieldError("title is required")
 
         stmt = delete(activity).where(activity.c.title == title)
 
-        with self._engine.begin() as conn:
-            res: Result = conn.execute(stmt)
+        async with self._engine.begin() as conn:
+            res: CursorResult = await conn.execute(stmt)
             return int(res.rowcount or 0)
 
-    def delete_activity_by_id(self, activity_id: int) -> int:
+    async def delete_activity_by_id(self, activity_id: int) -> int:
         if not activity_id:
             raise MissingRequiredFieldError("activity_id is required")
 
         stmt = delete(activity).where(activity.c.id == activity_id)
 
-        with self._engine.begin() as conn:
-            res: Result = conn.execute(stmt)
+        async with self._engine.begin() as conn:
+            res: CursorResult = await conn.execute(stmt)
             return int(res.rowcount or 0)
 
-    def get_activity_by_id(self, activity_id: int) -> Activity | None:
+    async def get_activity_by_id(self, activity_id: int) -> Activity | None:
         stmt = select(*activity.c).where(activity.c.id == activity_id).limit(1)
 
-        with self._engine.connect() as conn:
-            res: Result = conn.execute(stmt)
+        async with self._engine.connect() as conn:
+            res = await conn.execute(stmt)
             row = res.mappings().one_or_none()
             return self._to_activity(row) if row else None
 
-    def get_activity_by_title(self, title: str) -> Activity | None:
+    async def get_activity_by_title(self, title: str) -> Activity | None:
         title = (title or "").strip()
         if not title:
             raise MissingRequiredFieldError("title is required")
 
         stmt = select(*activity.c).where(activity.c.title == title).limit(1)
 
-        with self._engine.connect() as conn:
-            res: Result = conn.execute(stmt)
+        async with self._engine.connect() as conn:
+            res = await conn.execute(stmt)
             row = res.mappings().one_or_none()
             return self._to_activity(row) if row else None
 
-    def get_all_activities(self) -> list[Activity]:
+    async def get_all_activities(self) -> list[Activity]:
         stmt = select(*activity.c).order_by(activity.c.title)
 
-        with self._engine.connect() as conn:
-            res: Result = conn.execute(stmt)
+        async with self._engine.connect() as conn:
+            res = await conn.execute(stmt)
             rows = res.mappings().all()
             return [self._to_activity(row) for row in rows]
 
-    def get_activities_by_category(self, category_id: int) -> list[Activity]:
+    async def get_activities_by_category(self, category_id: int) -> list[Activity]:
         stmt = (
             select(*activity.c)
             .select_from(activity)
@@ -211,7 +212,7 @@ class ActivityRepo:
             .order_by(activity.c.title)
         )
 
-        with self._engine.connect() as conn:
-            res: Result = conn.execute(stmt)
+        async with self._engine.connect() as conn:
+            res = await conn.execute(stmt)
             rows = res.mappings().all()
             return [self._to_activity(row) for row in rows]

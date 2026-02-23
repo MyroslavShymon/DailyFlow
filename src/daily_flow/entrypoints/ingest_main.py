@@ -1,4 +1,5 @@
 import argparse
+import asyncio
 
 from daily_flow.config.db import load_db_settings
 from daily_flow.config.paths import INGEST_DATA_DIR
@@ -9,7 +10,7 @@ from daily_flow.ingest.schemas.mood_log import MOOD_LOG_INGEST_CONTRACT
 # common_mood_logs_29_01_2026.csv
 # ingest --file mood_logs_05_02_2026.xlsx --dataset mood_log
 
-def main() -> None:
+async def main_async() -> None:
     parser = argparse.ArgumentParser(description="Ingest process")
 
     parser.add_argument("--file", type=str, required=True, help="The name of the file you want to ingest")
@@ -25,8 +26,11 @@ def main() -> None:
 
     path = INGEST_DATA_DIR / args.file
 
-    build_ingest_cli(
+    await build_ingest_cli(
         file_path=path,
         contract=contract,
         db_settings=settings
     )
+
+def main() -> None:
+    asyncio.run(main_async())

@@ -20,7 +20,7 @@ class ActivityUsageService:
     def __init__(self, repo: ActivityUsageRepo) -> None:
         self._repo = repo
 
-    def upsert_activity_usage(self, dto: UpsertActivityUsageDTO) -> ActivityUsage:
+    async def upsert_activity_usage(self, dto: UpsertActivityUsageDTO) -> ActivityUsage:
         payload = dto.model_dump(exclude_none=True)
 
         usage_id = payload.pop("usage_id", None)
@@ -30,7 +30,7 @@ class ActivityUsageService:
         values = payload
 
         try:
-            return self._repo.upsert_activity_usage(
+            return await self._repo.upsert_activity_usage(
                 activity_id=activity_id,
                 used_at=used_at,
                 payload=values,
@@ -49,57 +49,57 @@ class ActivityUsageService:
             )
             raise TemporaryError("Database error. Please try again.") from e
 
-    def delete_activity_usage_by_id(self, usage_id: int) -> int:
+    async def delete_activity_usage_by_id(self, usage_id: int) -> int:
         if not usage_id:
             raise UserInputError("Please provide usage_id")
 
         try:
-            return self._repo.delete_activity_usage_by_id(usage_id)
+            return await self._repo.delete_activity_usage_by_id(usage_id)
         except (RepoError, SQLAlchemyError) as e:
             raise TemporaryError("Database error. Please try again.") from e
 
-    def delete_activity_usages_by_activity(self, activity_id: int) -> int:
+    async def delete_activity_usages_by_activity(self, activity_id: int) -> int:
         if not activity_id:
             raise UserInputError("Please provide activity_id")
 
         try:
-            return self._repo.delete_activity_usages_by_activity(activity_id)
+            return await self._repo.delete_activity_usages_by_activity(activity_id)
         except (RepoError, SQLAlchemyError) as e:
             raise TemporaryError("Database error. Please try again.") from e
 
-    def get_activity_usage_by_id(self, usage_id: int) -> ActivityUsage | None:
+    async def get_activity_usage_by_id(self, usage_id: int) -> ActivityUsage | None:
         if not usage_id:
             raise UserInputError("Please provide usage_id")
 
         try:
-            return self._repo.get_activity_usage_by_id(usage_id)
+            return await self._repo.get_activity_usage_by_id(usage_id)
         except (RepoError, SQLAlchemyError) as e:
             raise TemporaryError("Database error. Please try again.") from e
 
-    def get_activity_usages_by_activity(self, activity_id: int) -> list[ActivityUsage]:
+    async def get_activity_usages_by_activity(self, activity_id: int) -> list[ActivityUsage]:
         if not activity_id:
             raise UserInputError("Please provide activity_id")
 
         try:
-            return self._repo.get_activity_usages_by_activity(activity_id)
+            return await self._repo.get_activity_usages_by_activity(activity_id)
         except (RepoError, SQLAlchemyError) as e:
             raise TemporaryError("Database error. Please try again.") from e
 
-    def get_activity_usages_by_period(self, dto: ActivityUsagePeriodDTO) -> list[ActivityUsage]:
+    async def get_activity_usages_by_period(self, dto: ActivityUsagePeriodDTO) -> list[ActivityUsage]:
         payload = dto.model_dump()
         date_from = payload["date_from"]
         date_to = payload["date_to"]
 
         try:
-            return self._repo.get_activity_usages_by_period(date_from, date_to)
+            return await self._repo.get_activity_usages_by_period(date_from, date_to)
         except (MissingRequiredFieldError, RepoError, SQLAlchemyError) as e:
             raise TemporaryError("Database error. Please try again.") from e
 
-    def get_last_activity_usages(self, limit: int) -> list[ActivityUsage]:
+    async def get_last_activity_usages(self, limit: int) -> list[ActivityUsage]:
         if not limit or limit <= 0:
             raise UserInputError("limit must be > 0")
 
         try:
-            return self._repo.get_last_activity_usages(limit)
+            return await self._repo.get_last_activity_usages(limit)
         except (MissingRequiredFieldError, RepoError, SQLAlchemyError) as e:
             raise TemporaryError("Database error. Please try again.") from e

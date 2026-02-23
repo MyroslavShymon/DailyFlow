@@ -1,3 +1,4 @@
+from daily_flow.app.container import Container
 from daily_flow.services.activity.activity.dto import UpsertActivityDTO
 from daily_flow.services.activity.activity_category.dto import CategoryToActivityDTO
 from daily_flow.services.activity.activity_usage.dto import UpsertActivityUsageDTO
@@ -24,89 +25,92 @@ from daily_flow.ui.telegram.render.activity import render_activity, render_assig
 from daily_flow.ui.telegram.render.idea import render_idea, render_sphere
 from daily_flow.ui.telegram.render.mood_log import render_mood_log
 from daily_flow.ui.telegram.render.сommon_mood_log import render_tag_impact, render_common_mood_log
-from daily_flow.ui.telegram.runtime import router, c
+from daily_flow.ui.telegram.runtime import router
 from daily_flow.ui.telegram.utils.form_submit import form_submit
 
 from aiogram import types, F, Bot
 from aiogram.fsm.context import FSMContext
 
-
-SUBMIT_FORM_MAPPING = {
-    IDEA_FORM: {
-        "values_to_upsert": ["title", "description", "intent"],
-        "dto_class": UpsertIdeaDTO,
-        "mapping": idea_mapping,
-        "upsert_func": c.idea_service.upsert_idea,
-        "render_func": lambda saved, values: render_idea(saved),
-    },
-    SPHERE_FORM: {
-        "values_to_upsert": ["name", "description"],
-        "dto_class": UpsertSphereDTO,
-        "mapping": sphere_mapping,
-        "upsert_func": c.idea_service.upsert_sphere,
-        "render_func": lambda saved, values: render_sphere(saved),
-    },
-    MOOD_LOG_FORM: {
-        "values_to_upsert": ["day", "joy", "interest", "calm", "energy", "anxiety", "sadness", "irritation", "fatigue", "fear", "confidence", "sleep"],
-        "dto_class": UpsertMoodLogDTO,
-        "mapping": mood_log_mapping,
-        "upsert_func": c.mood_log_service.upsert_mood_log,
-        "render_func": lambda saved, values: render_mood_log(saved),
-    },
-    TAG_IMPACT_FORM: {
-        "values_to_upsert": ["day", "tag", "impact"],
-        "dto_class": UpsertTagImpactDTO,
-        "mapping": tag_impact_mapping,
-        "upsert_func": c.common_mood_log_service.upsert_tag_impact_for_day,
-        "render_func": lambda saved, values: render_tag_impact(saved, str(values.get("day") or "—")),
-    },
-    COMMON_MOOD_LOG_FORM: {
-        "values_to_upsert": ["day", "mood", "note"],
-        "dto_class": UpsertCommonMoodLogDTO,
-        "mapping": common_mood_log_mapping,
-        "upsert_func": c.common_mood_log_service.upsert_common_mood_log,
-        "render_func": lambda saved, values: render_common_mood_log(saved),
-    },
-    ACTIVITY_FORM: {
-        "values_to_upsert": list(activity_mapping.keys()),
-        "dto_class": UpsertActivityDTO,
-        "mapping": activity_mapping,
-        "upsert_func": c.activity_service.upsert_activity,
-        "render_func": lambda saved, values: render_activity(saved),
-    },
-    CATEGORY_FORM: {
-        "values_to_upsert": list(category_mapping.keys()),
-        "dto_class": UpsertCategoryDTO,
-        "mapping": category_mapping,
-        "upsert_func": c.category_service.upsert_category,
-        "render_func": lambda saved, values: render_category(saved),
-    },
-    ACTIVITY_CATEGORY_FORM: {
-        "values_to_upsert": list(activity_category_mapping.keys()),
-        "dto_class": CategoryToActivityDTO,
-        "mapping": activity_category_mapping,
-        "upsert_func": c.activity_category_service.assign_category_to_activity,
-        "render_func": lambda saved, values: render_assign_category_result(saved, values),
-    },
-    ACTIVITY_USAGE_FORM: {
-        "values_to_upsert": list(activity_usage_mapping.keys()),
-        "dto_class": UpsertActivityUsageDTO,
-        "mapping": activity_usage_mapping,
-        "upsert_func": c.activity_usage_service.upsert_activity_usage,
-        "render_func": lambda saved, values: render_activity_usage(saved),
-    },
-}
+def get_submit_form_mapping(db_container: Container):
+    return {
+        IDEA_FORM: {
+            "values_to_upsert": ["title", "description", "intent"],
+            "dto_class": UpsertIdeaDTO,
+            "mapping": idea_mapping,
+            "upsert_func": db_container.idea_service.upsert_idea,
+            "render_func": lambda saved, values: render_idea(saved),
+        },
+        SPHERE_FORM: {
+            "values_to_upsert": ["name", "description"],
+            "dto_class": UpsertSphereDTO,
+            "mapping": sphere_mapping,
+            "upsert_func": db_container.idea_service.upsert_sphere,
+            "render_func": lambda saved, values: render_sphere(saved),
+        },
+        MOOD_LOG_FORM: {
+            "values_to_upsert": ["day", "joy", "interest", "calm", "energy", "anxiety", "sadness", "irritation", "fatigue", "fear", "confidence", "sleep"],
+            "dto_class": UpsertMoodLogDTO,
+            "mapping": mood_log_mapping,
+            "upsert_func": db_container.mood_log_service.upsert_mood_log,
+            "render_func": lambda saved, values: render_mood_log(saved),
+        },
+        TAG_IMPACT_FORM: {
+            "values_to_upsert": ["day", "tag", "impact"],
+            "dto_class": UpsertTagImpactDTO,
+            "mapping": tag_impact_mapping,
+            "upsert_func": db_container.common_mood_log_service.upsert_tag_impact_for_day,
+            "render_func": lambda saved, values: render_tag_impact(saved, str(values.get("day") or "—")),
+        },
+        COMMON_MOOD_LOG_FORM: {
+            "values_to_upsert": ["day", "mood", "note"],
+            "dto_class": UpsertCommonMoodLogDTO,
+            "mapping": common_mood_log_mapping,
+            "upsert_func": db_container.common_mood_log_service.upsert_common_mood_log,
+            "render_func": lambda saved, values: render_common_mood_log(saved),
+        },
+        ACTIVITY_FORM: {
+            "values_to_upsert": list(activity_mapping.keys()),
+            "dto_class": UpsertActivityDTO,
+            "mapping": activity_mapping,
+            "upsert_func": db_container.activity_service.upsert_activity,
+            "render_func": lambda saved, values: render_activity(saved),
+        },
+        CATEGORY_FORM: {
+            "values_to_upsert": list(category_mapping.keys()),
+            "dto_class": UpsertCategoryDTO,
+            "mapping": category_mapping,
+            "upsert_func": db_container.category_service.upsert_category,
+            "render_func": lambda saved, values: render_category(saved),
+        },
+        ACTIVITY_CATEGORY_FORM: {
+            "values_to_upsert": list(activity_category_mapping.keys()),
+            "dto_class": CategoryToActivityDTO,
+            "mapping": activity_category_mapping,
+            "upsert_func": db_container.activity_category_service.assign_category_to_activity,
+            "render_func": lambda saved, values: render_assign_category_result(saved, values),
+        },
+        ACTIVITY_USAGE_FORM: {
+            "values_to_upsert": list(activity_usage_mapping.keys()),
+            "dto_class": UpsertActivityUsageDTO,
+            "mapping": activity_usage_mapping,
+            "upsert_func": db_container.activity_usage_service.upsert_activity_usage,
+            "render_func": lambda saved, values: render_activity_usage(saved),
+        },
+    }
 
 @router.callback_query(F.data.startswith("submit_") & F.data.endswith("_form"))
 async def submit_form_handler(
         callback: types.CallbackQuery,
         state: FSMContext,
-        bot: Bot
+        bot: Bot,
+        db_container: Container
 ):
     data = callback.data
     form_name = data.removeprefix("submit_").removesuffix("_form")
 
-    config = SUBMIT_FORM_MAPPING.get(form_name)
+    submit_form_mapping = get_submit_form_mapping(db_container)
+    config = submit_form_mapping.get(form_name)
+
     if not config:
         await callback.answer("Невідома форма", show_alert=True)
         return

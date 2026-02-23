@@ -4,19 +4,20 @@ from datetime import datetime
 from aiogram import types, F
 from aiogram.fsm.context import FSMContext
 
+from daily_flow.app.container import Container
 from daily_flow.ui.telegram.keyboards.mood import MoodMenu
 from daily_flow.ui.telegram.render.mood_log import render_mood_log
-from daily_flow.ui.telegram.runtime import router, c
+from daily_flow.ui.telegram.runtime import router
 from daily_flow.ui.telegram.states import MoodGetForm
 from daily_flow.ui.telegram.utils.date_selection import DateAction, get_date_keyboard
 
 
 logger = logging.getLogger(__name__)
 
-async def perform_mood_log_get(message: types.Message, date_str: str, state: FSMContext):
+async def perform_mood_log_get(message: types.Message, date_str: str, state: FSMContext, db_container: Container):
     try:
         selected_date = datetime.strptime(date_str, "%d-%m-%Y").date()
-        mood_log = c.mood_log_service.get_mood_log_by_day(selected_date)
+        mood_log = await db_container.mood_log_service.get_mood_log_by_day(selected_date)
 
         await state.clear()
 

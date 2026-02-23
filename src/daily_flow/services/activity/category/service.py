@@ -12,14 +12,14 @@ class CategoryService:
     def __init__(self, repo: CategoryRepo) -> None:
         self._repo = repo
 
-    def upsert_category(self, dto: UpsertCategoryDTO) -> Category:
+    async def upsert_category(self, dto: UpsertCategoryDTO) -> Category:
         payload = dto.model_dump(exclude_none=True)
 
         name = payload.pop("name")
         description = payload.pop("description", None)
 
         try:
-            return self._repo.upsert_category(name=name, description=description)
+            return await self._repo.upsert_category(name=name, description=description)
         except DuplicateError as e:
             raise ConflictError(str(e)) from e
         except MissingRequiredFieldError as e:
@@ -28,46 +28,46 @@ class CategoryService:
             logger.exception("CategoryService.upsert_category failed (name=%s)", name)
             raise TemporaryError("Database error. Please try again.") from e
 
-    def delete_category_by_name(self, name: str) -> int:
+    async def delete_category_by_name(self, name: str) -> int:
         name = (name or "").strip()
         if not name:
             raise UserInputError("Please provide a correct name format")
 
         try:
-            return self._repo.delete_category_by_name(name=name)
+            return await self._repo.delete_category_by_name(name=name)
         except (RepoError, SQLAlchemyError) as e:
             raise TemporaryError("Database error. Please try again.") from e
 
-    def delete_category_by_id(self, category_id: int) -> int:
+    async def delete_category_by_id(self, category_id: int) -> int:
         if not category_id:
             raise UserInputError("Please provide category_id")
 
         try:
-            return self._repo.delete_category_by_id(category_id=category_id)
+            return await self._repo.delete_category_by_id(category_id=category_id)
         except (RepoError, SQLAlchemyError) as e:
             raise TemporaryError("Database error. Please try again.") from e
 
-    def get_category_by_id(self, category_id: int) -> Category | None:
+    async def get_category_by_id(self, category_id: int) -> Category | None:
         if not category_id:
             raise UserInputError("Please provide category_id")
 
         try:
-            return self._repo.get_category_by_id(category_id)
+            return await self._repo.get_category_by_id(category_id)
         except (RepoError, SQLAlchemyError) as e:
             raise TemporaryError("Database error. Please try again.") from e
 
-    def get_category_by_name(self, name: str) -> Category | None:
+    async def get_category_by_name(self, name: str) -> Category | None:
         name = (name or "").strip()
         if not name:
             raise UserInputError("Please provide a correct name format")
 
         try:
-            return self._repo.get_category_by_name(name)
+            return await self._repo.get_category_by_name(name)
         except (RepoError, SQLAlchemyError) as e:
             raise TemporaryError("Database error. Please try again.") from e
 
-    def get_all_categories(self) -> list[Category]:
+    async def get_all_categories(self) -> list[Category]:
         try:
-            return self._repo.get_all_categories()
+            return await self._repo.get_all_categories()
         except (RepoError, SQLAlchemyError) as e:
             raise TemporaryError("Database error. Please try again.") from e

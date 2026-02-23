@@ -3,8 +3,8 @@ from dataclasses import dataclass, asdict
 from datetime import datetime
 from typing import Optional, Any, Mapping
 
-from sqlalchemy.engine import Engine, Result
-from sqlalchemy import insert, select
+from sqlalchemy.ext.asyncio import AsyncEngine
+from sqlalchemy import insert, select, exists
 from sqlalchemy.exc import IntegrityError
 
 from daily_flow.db.errors import map_integrity_error, UnknownFieldError, MissingRequiredFieldError
@@ -30,7 +30,7 @@ class IngestRun:
     id: Optional[int] = None
 
 class IngestRunRepo:
-    def __init__(self, engine: Engine) -> None:
+    def __init__(self, engine: AsyncEngine) -> None:
         self._engine = engine
 
     @staticmethod
@@ -48,7 +48,7 @@ class IngestRunRepo:
             error_message=row_mapping["error_message"],
         )
 
-    def add_ingest(self, run: IngestRun) -> IngestRun:
+    async def add_ingest(self, run: IngestRun) -> IngestRun:
         data = asdict(run)
 
         data.pop("id")
@@ -67,8 +67,8 @@ class IngestRunRepo:
             raise MissingRequiredFieldError(f"Some of required fields are none: {','.join(none_fields)}")
 
         try:
-            with self._engine.begin() as conn:
-                res: Result = conn.execute(
+            async with self._engine.begin() as conn:
+                res = await conn.execute(
                     insert(ingest_run)
                     .values(**data)
                     .returning(*ingest_run.c)
@@ -84,13 +84,12 @@ class IngestRunRepo:
             )
             raise map_integrity_error(e, ingest_run.name) from e
 
-    def is_already_processed(self, file_hash: str) -> bool:
+    async def is_already_processed(self, file_hash: str) -> bool:
         try:
-            with self._engine.connect() as conn:
-                return conn.execute(
-                    select(ingest_run)
-                    .where(ingest_run.c.file_hash == file_hash)
-                ).scalar() is not None
+            async with self._engine.connect() as conn:
+                return bool(await conn.scalar(
+                    select(exists().where(ingest_run.c.file_hash == file_hash))
+                ))
         except IntegrityError as e:
             logger.exception(
                 "IngestRunRepo.is_already_processed failed "

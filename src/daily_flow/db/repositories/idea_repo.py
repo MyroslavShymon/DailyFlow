@@ -4,10 +4,10 @@ from datetime import datetime
 from typing import Optional, Mapping, Any
 from enum import StrEnum
 
-from sqlalchemy.engine import Engine, Result
+from sqlalchemy.ext.asyncio import AsyncEngine
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy import select, delete, exists, insert, and_
+from sqlalchemy import select, delete, exists, and_, CursorResult
 
 from daily_flow.db.errors import map_integrity_error, MissingRequiredFieldError, UnknownFieldError, ParentNotFoundError
 from daily_flow.db.schema import idea, sphere, idea_sphere
@@ -39,7 +39,7 @@ class Sphere:
     description: Optional[str]
 
 class IdeaRepo:
-    def __init__(self, engine: Engine) -> None:
+    def __init__(self, engine: AsyncEngine) -> None:
         self._engine = engine
 
     @staticmethod
@@ -61,16 +61,16 @@ class IdeaRepo:
         )
 
     @staticmethod
-    def _assert_exists(conn, table, entity_id: int, name: str) -> None:
-        exists_row = conn.execute(
+    async def _assert_exists(conn, table, entity_id: int, name: str) -> None:
+        exists_row = (await conn.execute(
             select(exists().where(table.c.id == entity_id))
-        ).scalar()
+        )).scalar()
 
         if not exists_row:
             raise ParentNotFoundError(f"There is no {name} entity with such id")
 
 
-    def upsert_sphere(
+    async def upsert_sphere(
             self,
             name: str,
             description: str | None
@@ -98,13 +98,14 @@ class IdeaRepo:
             )
 
         try:
-            with self._engine.begin() as conn:
-                res: Result = conn.execute(stmt)
+            async with self._engine.begin() as conn:
+                res = await conn.execute(stmt)
                 row = res.mappings().one_or_none()
                 if row is None:
-                    row = conn.execute(
-                        select(sphere).where(sphere.c.name == name)
-                    ).mappings().one()
+                    res = await conn.execute(
+                        select(*sphere.c).where(sphere.c.name == name)
+                    )
+                    row = res.mappings().one()
                 return self._to_sphere(row)
         except IntegrityError as e:
             logger.exception(
@@ -115,7 +116,7 @@ class IdeaRepo:
             )
             raise map_integrity_error(e, sphere.name) from e
 
-    def upsert_idea(
+    async def upsert_idea(
             self,
             title: str,
             payload: dict[str, Any]
@@ -150,14 +151,15 @@ class IdeaRepo:
             )
 
         try:
-            with self._engine.begin() as conn:
-                res: Result = conn.execute(stmt)
+            async with self._engine.begin() as conn:
+                res = await conn.execute(stmt)
                 row = res.mappings().one_or_none()
                 if row is None:
-                    row = conn.execute(
-                        select(idea)
+                    res = await conn.execute(
+                        select(*idea.c)
                         .where(idea.c.title == title)
-                    ).mappings().one()
+                    )
+                    row = res.mappings().one()
                 return self._to_idea(row)
         except IntegrityError as e:
             logger.exception(
@@ -168,15 +170,15 @@ class IdeaRepo:
             )
             raise map_integrity_error(e, idea.name) from e
 
-    def assign_sphere_to_idea(
+    async def assign_sphere_to_idea(
             self,
             sphere_id: int,
             idea_id: int
     ) -> bool:
         try:
-            with self._engine.begin() as conn:
-                self._assert_exists(conn, idea, idea_id, "idea")
-                self._assert_exists(conn, sphere, sphere_id, "sphere")
+            async with self._engine.begin() as conn:
+                await self._assert_exists(conn, idea, idea_id, "idea")
+                await self._assert_exists(conn, sphere, sphere_id, "sphere")
 
                 stmt = (
                     sqlite_insert(idea_sphere)
@@ -185,7 +187,7 @@ class IdeaRepo:
                         index_elements=[idea_sphere.c.idea_id, idea_sphere.c.sphere_id]
                     )
                 )
-                res: Result = conn.execute(stmt)
+                res: CursorResult = await conn.execute(stmt)
                 is_inserted = res.rowcount > 0
                 return is_inserted
         except IntegrityError as e:
@@ -198,20 +200,20 @@ class IdeaRepo:
             raise map_integrity_error(e, idea_sphere.name) from e
 
 
-    def delete_idea_by_title(self, title: str) -> int:
+    async def delete_idea_by_title(self, title: str) -> int:
         stmt = (
             delete(idea)
             .where(idea.c.title == title)
         )
 
-        with self._engine.begin() as conn:
-            res: Result = conn.execute(stmt)
+        async with self._engine.begin() as conn:
+            res: CursorResult = await conn.execute(stmt)
             return int(res.rowcount or 0)
 
-    def delete_sphere_from_idea(self, idea_id: int, sphere_id: int) -> int:
-        with self._engine.begin() as conn:
-            self._assert_exists(conn, idea, idea_id, "idea")
-            self._assert_exists(conn, sphere, sphere_id, "sphere")
+    async def delete_sphere_from_idea(self, idea_id: int, sphere_id: int) -> int:
+        async with self._engine.begin() as conn:
+            await self._assert_exists(conn, idea, idea_id, "idea")
+            await self._assert_exists(conn, sphere, sphere_id, "sphere")
             stmt = (
                 delete(idea_sphere)
                 .where(
@@ -222,21 +224,21 @@ class IdeaRepo:
                 )
             )
 
-            res: Result = conn.execute(stmt)
+            res: CursorResult = await conn.execute(stmt)
             return int(res.rowcount or 0)
 
-    def delete_sphere_by_name(self, name: str) -> int:
+    async def delete_sphere_by_name(self, name: str) -> int:
         name = (name or "").strip()
         if not name:
             raise MissingRequiredFieldError("Name param is empty to delete.")
 
         stmt = delete(sphere).where(sphere.c.name == name)
 
-        with self._engine.begin() as conn:
-            res: Result = conn.execute(stmt)
+        async with self._engine.begin() as conn:
+            res: CursorResult = await conn.execute(stmt)
             return int(res.rowcount or 0)
 
-    def get_ideas_by_sphere(self, sphere_id: int) -> list[Idea]:
+    async def get_ideas_by_sphere(self, sphere_id: int) -> list[Idea]:
         stmt = (
             select(*idea.c)
             .select_from(idea)
@@ -244,19 +246,19 @@ class IdeaRepo:
             .where(idea_sphere.c.sphere_id == sphere_id)
         )
 
-        with self._engine.connect() as conn:
-            res: Result = conn.execute(stmt)
+        async with self._engine.connect() as conn:
+            res = await conn.execute(stmt)
             rows = res.mappings().all()
             return [self._to_idea(row) for row in rows]
 
-    def get_all_ideas(self) -> list[Idea]:
-        with self._engine.connect() as conn:
-            res: Result = conn.execute(select(*idea.c))
+    async def get_all_ideas(self) -> list[Idea]:
+        async with self._engine.connect() as conn:
+            res = await conn.execute(select(*idea.c))
             rows = res.mappings().all()
             return [self._to_idea(row) for row in rows]
 
-    def get_all_spheres(self) -> list[Sphere]:
-        with self._engine.connect() as conn:
-            res: Result = conn.execute(select(*sphere.c))
+    async def get_all_spheres(self) -> list[Sphere]:
+        async with self._engine.connect() as conn:
+            res = await conn.execute(select(*sphere.c))
             rows = res.mappings().all()
             return [self._to_sphere(row) for row in rows]

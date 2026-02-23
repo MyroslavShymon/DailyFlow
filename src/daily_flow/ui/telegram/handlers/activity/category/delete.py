@@ -1,11 +1,11 @@
-import asyncio
 import logging
 
 from aiogram import types, F
 from aiogram.fsm.context import FSMContext
 
+from daily_flow.app.container import Container
 from daily_flow.ui.telegram.keyboards.activity import ActivityMenu
-from daily_flow.ui.telegram.runtime import c, router
+from daily_flow.ui.telegram.runtime import router
 from daily_flow.ui.telegram.states import CategoryDeleteForm
 from daily_flow.ui.telegram.handlers.activity.category.get import get_all_categories_text
 
@@ -13,10 +13,10 @@ from daily_flow.ui.telegram.handlers.activity.category.get import get_all_catego
 logger = logging.getLogger(__name__)
 
 @router.message(F.text == ActivityMenu.BTN_DELETE_CATEGORY)
-async def delete_category(message: types.Message, state: FSMContext):
+async def delete_category(message: types.Message, state: FSMContext, db_container: Container):
     await state.set_state(CategoryDeleteForm.waiting_for_ref)
 
-    categories_text = await get_all_categories_text()
+    categories_text = await get_all_categories_text(db_container)
 
     await message.answer(
         "Введи **ID** або **назву (name)** категорії, яку треба видалити.\n\n"
@@ -27,16 +27,16 @@ async def delete_category(message: types.Message, state: FSMContext):
 
 
 @router.message(CategoryDeleteForm.waiting_for_ref)
-async def perform_delete_category(message: types.Message, state: FSMContext):
+async def perform_delete_category(message: types.Message, state: FSMContext, db_container: Container):
     ref = (message.text or "").strip()
     if not ref:
         return await message.answer("❌ Введи ID або name ще раз:")
 
     try:
         if ref.isdigit():
-            deleted = await asyncio.to_thread(c.category_service.delete_category_by_id, int(ref))
+            deleted = await db_container.category_service.delete_category_by_id(int(ref))
         else:
-            deleted = await asyncio.to_thread(c.category_service.delete_category_by_name, ref)
+            deleted = await db_container.category_service.delete_category_by_name(ref)
 
         await state.clear()
 

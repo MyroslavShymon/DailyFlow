@@ -3,6 +3,7 @@ import logging
 from aiogram import types, F, Bot
 from aiogram.fsm.context import FSMContext
 
+from daily_flow.app.container import Container
 from daily_flow.ui.telegram.constants.common_mood_log import tag_impact_mapping
 from daily_flow.ui.telegram.handlers.common_mood_log.tag.get import get_all_tags, get_all_tags_text
 from daily_flow.ui.telegram.keyboards.common_mood import CommonMoodMenu
@@ -27,7 +28,7 @@ logger = logging.getLogger(__name__)
 TAG_IMPACT_FORM = "tag_impact"
 
 @router.callback_query(F.data.startswith(f"edit_{TAG_IMPACT_FORM}:"))
-async def edit_any_tag_impact_field(callback: types.CallbackQuery, state: FSMContext):
+async def edit_any_tag_impact_field(callback: types.CallbackQuery, state: FSMContext, db_container: Container):
     await callback.answer()
 
     field_name = callback.data.split(":")[1]
@@ -49,7 +50,7 @@ async def edit_any_tag_impact_field(callback: types.CallbackQuery, state: FSMCon
             )
         )
     elif field_name == "tag":
-        tags_text = await get_all_tags_text(state)
+        tags_text = await get_all_tags_text(state, db_container)
         await callback.message.edit_text(f"Введіть ваші нові дані про {tag_impact_mapping.get('tag')}: \n {tags_text}")
         await state.set_state(TagImpactForm.waiting_input)
     else:

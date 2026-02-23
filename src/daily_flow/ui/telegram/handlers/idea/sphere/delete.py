@@ -1,21 +1,21 @@
-import asyncio
 import logging
 
 from aiogram import types, F
 from aiogram.fsm.context import FSMContext
 
+from daily_flow.app.container import Container
 from daily_flow.ui.telegram.keyboards.idea import IdeaMenu
-from daily_flow.ui.telegram.runtime import c, router
+from daily_flow.ui.telegram.runtime import router
 from daily_flow.ui.telegram.states import SphereDeleteForm
 from daily_flow.ui.telegram.handlers.idea.sphere.get import get_all_spheres_text
 
 logger = logging.getLogger(__name__)
 
 @router.message(F.text == IdeaMenu.BTN_DELETE_SPHERE)
-async def delete_sphere(message: types.Message, state: FSMContext):
+async def delete_sphere(message: types.Message, state: FSMContext, db_container: Container):
     await state.set_state(SphereDeleteForm.waiting_for_name)
 
-    spheres_text = await get_all_spheres_text()
+    spheres_text = await get_all_spheres_text(db_container)
 
     await message.answer(
         "Введи точну назву (name) сфери, яку треба видалити."
@@ -26,14 +26,14 @@ async def delete_sphere(message: types.Message, state: FSMContext):
 
 
 @router.message(SphereDeleteForm.waiting_for_name)
-async def perform_delete_sphere(message: types.Message, state: FSMContext):
+async def perform_delete_sphere(message: types.Message, state: FSMContext, db_container: Container):
     name = (message.text or "").strip()
 
     if not name:
         return await message.answer("❌ Name не може бути порожнім. Введи name ще раз:")
 
     try:
-        deleted = await asyncio.to_thread(c.idea_service.delete_sphere_by_name, name)
+        deleted = await db_container.idea_service.delete_sphere_by_name(name)
         await state.clear()
 
         if deleted > 0:

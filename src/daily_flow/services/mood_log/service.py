@@ -14,7 +14,7 @@ class MoodLogService:
     def __init__(self, repo: MoodLogRepo) -> None:
         self._repo = repo
 
-    def upsert_mood_log(self, dto: UpsertMoodLogDTO) -> MoodLog:
+    async def upsert_mood_log(self, dto: UpsertMoodLogDTO) -> MoodLog:
         payload = dto.model_dump(exclude_none=True)
         print(f"repo_payload{dto=}")
         day = payload.pop("day")
@@ -24,7 +24,7 @@ class MoodLogService:
             raise UserInputError("Provide at least one score to save.")
 
         try:
-            mood_log = self._repo.upsert_mood_log_by_day(
+            mood_log = await self._repo.upsert_mood_log_by_day(
                 day=day,
                 values=values
             )
@@ -41,32 +41,32 @@ class MoodLogService:
             )
             raise TemporaryError("Database error. Please try again.") from e
 
-    def get_mood_log_by_day(self, day: date) -> MoodLog | None:
+    async def get_mood_log_by_day(self, day: date) -> MoodLog | None:
         if not day:
             raise UserInputError("Please provide a day param")
 
         try:
-            return self._repo.get_mood_log_by_day(day=day)
+            return await self._repo.get_mood_log_by_day(day=day)
         except (RepoError, SQLAlchemyError) as e:
             raise TemporaryError("Database error. Please try again.") from e
 
 
-    def get_list_by_date_range(self, start: date, end: date) -> list[MoodLog]:
+    async def get_list_by_date_range(self, start: date, end: date) -> list[MoodLog]:
         if None in (start, end):
             raise UserInputError("Please provide start or end day param")
 
         try:
-            return self._repo.list_by_date_range(start=start, end=end)
+            return await self._repo.list_by_date_range(start=start, end=end)
         except (RepoError, SQLAlchemyError) as e:
             raise TemporaryError("Database error. Please try again.") from e
 
 
-    def delete_mood_log_by_day(self, day: date) -> int:
+    async def delete_mood_log_by_day(self, day: date) -> int:
         if not day:
             raise UserInputError("Please provide a day param")
 
         try:
-            return self._repo.delete_mood_log_by_day(day)
+            return await self._repo.delete_mood_log_by_day(day)
         except (RepoError, SQLAlchemyError) as e:
             raise TemporaryError("Database error. Please try again.") from e
 

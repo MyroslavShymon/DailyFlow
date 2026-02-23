@@ -1,13 +1,13 @@
-import asyncio
 import logging
 from datetime import datetime
 
 from aiogram import types, F
 from aiogram.fsm.context import FSMContext
 
+from daily_flow.app.container import Container
 from daily_flow.ui.telegram.keyboards.common_mood import CommonMoodMenu
 from daily_flow.ui.telegram.render.сommon_mood_log import render_tag_impact
-from daily_flow.ui.telegram.runtime import c, router
+from daily_flow.ui.telegram.runtime import router
 from daily_flow.ui.telegram.states import TagImpactGetForm
 from daily_flow.ui.telegram.utils.cache_state import get_cache, set_cache_field
 from daily_flow.ui.telegram.utils.date_selection import get_date_keyboard, DateAction
@@ -15,18 +15,18 @@ from daily_flow.ui.telegram.utils.date_selection import get_date_keyboard, DateA
 
 logger = logging.getLogger(__name__)
 
-async def get_all_tags(state: FSMContext) -> list[str]:
+async def get_all_tags(state: FSMContext, db_container: Container) -> list[str]:
     cache = await get_cache(state)
     tags = cache.get("tags")
 
     if not tags:
-        tags = await asyncio.to_thread(c.common_mood_log_service.get_all_unique_tags)
+        tags = await db_container.common_mood_log_service.get_all_unique_tags()
         await set_cache_field(state, "tags", tags)
 
     return tags
 
-async def get_all_tags_text(state: FSMContext) -> str:
-    tags = await get_all_tags(state)
+async def get_all_tags_text(state: FSMContext, db_container: Container) -> str:
+    tags = await get_all_tags(state, db_container)
 
     if not tags:
         return "На жаль, поки немає тегів"
@@ -42,14 +42,14 @@ async def get_all_tags_text(state: FSMContext) -> str:
     return text
 
 @router.message(F.text == CommonMoodMenu.BTN_GET_ALL_TAGS)
-async def get_tag_impact(message: types.Message, state: FSMContext):
-    text = await get_all_tags_text(state)
+async def get_tag_impact(message: types.Message, state: FSMContext, db_container: Container):
+    text = await get_all_tags_text(state, db_container)
     await message.answer(text)
 
-async def perform_tag_impact_get(message: types.Message, date_str: str, state: FSMContext):
+async def perform_tag_impact_get(message: types.Message, date_str: str, state: FSMContext, db_container: Container):
     try:
         selected_date = datetime.strptime(date_str, "%d-%m-%Y").date()
-        tags_by_day = c.common_mood_log_service.get_tags_by_day(selected_date)
+        tags_by_day = await db_container.common_mood_log_service.get_tags_by_day(selected_date)
 
         await state.clear()
 

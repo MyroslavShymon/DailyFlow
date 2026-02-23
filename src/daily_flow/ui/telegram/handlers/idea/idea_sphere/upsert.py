@@ -1,14 +1,14 @@
-import asyncio
 import logging
 
 from aiogram import types, F
 from aiogram.fsm.context import FSMContext
 
+from daily_flow.app.container import Container
 from daily_flow.services.idea.dto import SphereToIdeaDTO
 from daily_flow.ui.telegram.handlers.idea.get import get_all_ideas_text
 from daily_flow.ui.telegram.handlers.idea.sphere.get import get_all_spheres_text
 from daily_flow.ui.telegram.keyboards.idea import IdeaMenu
-from daily_flow.ui.telegram.runtime import c, router
+from daily_flow.ui.telegram.runtime import router
 from daily_flow.ui.telegram.states import SphereToIdeaAssignForm
 
 logger = logging.getLogger(__name__)
@@ -17,10 +17,10 @@ KEY_IDEA_ID = "idea_id_for_assign"
 
 
 @router.message(F.text == IdeaMenu.BTN_ASSIGN_SPHERE_TO_IDEA)
-async def assign_sphere_to_idea(message: types.Message, state: FSMContext):
+async def assign_sphere_to_idea(message: types.Message, state: FSMContext, db_container: Container):
     await state.set_state(SphereToIdeaAssignForm.waiting_for_idea_id)
 
-    ideas_text = await get_all_ideas_text()
+    ideas_text = await get_all_ideas_text(db_container)
 
     await message.answer(
         "Введи **ID ідеї**, до якої треба додати сферу:\n\n"
@@ -31,7 +31,7 @@ async def assign_sphere_to_idea(message: types.Message, state: FSMContext):
 
 
 @router.message(SphereToIdeaAssignForm.waiting_for_idea_id)
-async def assign_sphere_to_idea_step1(message: types.Message, state: FSMContext):
+async def assign_sphere_to_idea_step1(message: types.Message, state: FSMContext, db_container: Container):
     raw = (message.text or "").strip()
 
     try:
@@ -42,7 +42,7 @@ async def assign_sphere_to_idea_step1(message: types.Message, state: FSMContext)
     await state.update_data({KEY_IDEA_ID: idea_id})
     await state.set_state(SphereToIdeaAssignForm.waiting_for_sphere_id)
 
-    spheres_text = await get_all_spheres_text()
+    spheres_text = await get_all_spheres_text(db_container)
 
     await message.answer(
         "Тепер введи **ID сфери**, яку треба додати до ідеї:\n\n"
@@ -53,7 +53,7 @@ async def assign_sphere_to_idea_step1(message: types.Message, state: FSMContext)
 
 
 @router.message(SphereToIdeaAssignForm.waiting_for_sphere_id)
-async def assign_sphere_to_idea_step2(message: types.Message, state: FSMContext):
+async def assign_sphere_to_idea_step2(message: types.Message, state: FSMContext, db_container: Container):
     data = await state.get_data()
     idea_id = data.get(KEY_IDEA_ID)
 
@@ -66,7 +66,7 @@ async def assign_sphere_to_idea_step2(message: types.Message, state: FSMContext)
 
     try:
         dto = SphereToIdeaDTO(sphere_id=sphere_id, idea_id=idea_id)
-        is_inserted = await asyncio.to_thread(c.idea_service.assign_sphere_to_idea, dto)
+        is_inserted = await db_container.idea_service.assign_sphere_to_idea(dto)
 
         await state.clear()
 

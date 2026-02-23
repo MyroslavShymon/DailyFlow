@@ -4,8 +4,9 @@ from datetime import datetime
 from aiogram import types, F
 from aiogram.fsm.context import FSMContext
 
+from daily_flow.app.container import Container
 from daily_flow.ui.telegram.keyboards.common_mood import CommonMoodMenu
-from daily_flow.ui.telegram.runtime import router, c
+from daily_flow.ui.telegram.runtime import router
 from daily_flow.ui.telegram.states import TagImpactDeleteForm
 from daily_flow.ui.telegram.utils.date_selection import get_date_keyboard, DateAction
 
@@ -16,11 +17,12 @@ async def perform_tag_impact_delete(
         message: types.Message,
         state: FSMContext,
         date_str: str,
-        tag: str | None
+        db_container: Container,
+        tag: str | None,
 ):
     try:
         selected_date = datetime.strptime(date_str, "%d-%m-%Y").date()
-        tag_impact = c.common_mood_log_service.get_tags_by_day(selected_date)
+        tag_impact = await db_container.common_mood_log_service.get_tags_by_day(selected_date)
 
         if not tag_impact:
             await state.clear()
@@ -36,7 +38,7 @@ async def perform_tag_impact_delete(
                 reply_markup=CommonMoodMenu.get()
             )
 
-        deleted_count = c.common_mood_log_service.delete_tag_by_day(
+        deleted_count = await db_container.common_mood_log_service.delete_tag_by_day(
             day=selected_date,
             tag=tag
         )

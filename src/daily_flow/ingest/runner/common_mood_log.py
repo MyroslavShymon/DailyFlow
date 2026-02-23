@@ -14,7 +14,7 @@ from daily_flow.ingest.transforms.common_mood_log import transform_common_mood_l
 from daily_flow.ingest.validators.common_mood_log.validator import validate_common_mood_log
 
 
-def common_mood_log_runner(
+async def common_mood_log_runner(
         file_path: Union[str, Path],
         contract: CommonMoodLogIngestContract,
         ingest_run_repo: IngestRunRepo,
@@ -31,7 +31,7 @@ def common_mood_log_runner(
     result_metrics = None
 
     try:
-        ingest_result = ingest_run(**base_ingest_params)
+        ingest_result = await ingest_run(**base_ingest_params)
         if ingest_result and ingest_result.status == IngestStatusType.SKIPPED:
             return IngestStatusType.SKIPPED
 
@@ -48,27 +48,29 @@ def common_mood_log_runner(
             bad_action="quarantine"
         )
 
-        batch_upsert_result = load_common_mood_log(
+        batch_upsert_result = await load_common_mood_log(
             df=clean_result.df_clean,
             common_mood_log_repo=common_mood_log_repo
         )
 
         if batch_upsert_result:
-            return ingest_run(
+            ingest_run_result = await ingest_run(
                 **base_ingest_params,
                 end_time=datetime.now(),
                 metrics=result_metrics
-            ).status
+            )
+            return ingest_run_result.status
     except Exception as e:
         end_time = datetime.now()
         msg = str(getattr(e, "orig", e)).lower()
 
-        return ingest_run(
+        ingest_run_result = await ingest_run(
             **base_ingest_params,
             end_time=end_time,
             error_message=msg,
             metrics=result_metrics
-        ).status
+        )
+        return ingest_run_result.status
 
 
 

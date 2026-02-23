@@ -14,7 +14,7 @@ class CommonMoodLogService:
     def __init__(self, repo: CommonMoodLogRepo) -> None:
         self._repo = repo
 
-    def upsert_common_mood_log(self, dto: UpsertCommonMoodLogDTO) -> CommonMoodLog:
+    async def upsert_common_mood_log(self, dto: UpsertCommonMoodLogDTO) -> CommonMoodLog:
         payload = dto.model_dump(exclude_none=True)
 
         day = payload.pop("day")
@@ -24,7 +24,7 @@ class CommonMoodLogService:
             raise UserInputError("Provide mood or note.")
 
         try:
-            common_mood_log = self._repo.upsert_common_mood_log_by_day(
+            common_mood_log = await self._repo.upsert_common_mood_log_by_day(
                 day=day,
                 payload=values
             )
@@ -41,16 +41,16 @@ class CommonMoodLogService:
             )
             raise TemporaryError("Database error. Please try again.") from e
 
-    def get_common_mood_by_day(self, day: date) -> CommonMoodLog | None:
+    async def get_common_mood_by_day(self, day: date) -> CommonMoodLog | None:
         if not day:
             raise UserInputError("Please provide a day param")
 
         try:
-            return self._repo.get_common_mood_log_by_day(day)
+            return await self._repo.get_common_mood_log_by_day(day)
         except (RepoError, SQLAlchemyError) as e:
             raise TemporaryError("Database error. Please try again.") from e
 
-    def upsert_tag_impact_for_day(self, dto: UpsertTagImpactDTO) -> MoodTagImpact:
+    async def upsert_tag_impact_for_day(self, dto: UpsertTagImpactDTO) -> MoodTagImpact:
         payload = dto.model_dump(exclude_none=True)
 
         day = payload.pop("day")
@@ -60,7 +60,7 @@ class CommonMoodLogService:
             raise UserInputError("Provide tag and impact.")
 
         try:
-            tag_impact = self._repo.upsert_tag_by_day(day=day, payload=values)
+            tag_impact = await self._repo.upsert_tag_by_day(day=day, payload=values)
             return tag_impact
         except DuplicateError as e:
             raise ConflictError(str(e)) from e
@@ -73,28 +73,28 @@ class CommonMoodLogService:
             )
             raise TemporaryError("Database error. Please try again.") from e
 
-    def get_tags_by_day(self, day: date) -> list[MoodTagImpact]:
+    async def get_tags_by_day(self, day: date) -> list[MoodTagImpact]:
         if not day:
             raise UserInputError("Please provide a day param")
 
         try:
-            return self._repo.get_tags_by_day(day)
+            return await self._repo.get_tags_by_day(day)
         except (RepoError, SQLAlchemyError) as e:
             raise TemporaryError("Database error. Please try again.") from e
 
-    def delete_tag_by_day(self, day: date, tag: str) -> int:
+    async def delete_tag_by_day(self, day: date, tag: str) -> int:
         if not day or not tag:
             raise UserInputError("Please provide a day or tag params")
 
         try:
-            return self._repo.delete_tag_by_day(day=day, tag=tag)
+            return await self._repo.delete_tag_by_day(day=day, tag=tag)
         except (MissingRequiredFieldError, ParentNotFoundError) as e:
             raise UserInputError(str(e)) from e
         except (RepoError, SQLAlchemyError) as e:
             raise TemporaryError("Database error. Please try again.") from e
 
-    def get_all_unique_tags(self) -> list[str]:
+    async def get_all_unique_tags(self) -> list[str]:
         try:
-            return self._repo.get_all_unique_tags()
+            return await self._repo.get_all_unique_tags()
         except (RepoError, SQLAlchemyError) as e:
             raise TemporaryError("Database error. Please try again.") from e

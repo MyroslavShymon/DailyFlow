@@ -1,22 +1,25 @@
 import logging
-from sqlalchemy.engine import Engine
+from sqlalchemy.ext.asyncio import AsyncEngine
 
 from daily_flow.db.schema import metadata
 
 logger = logging.getLogger(__name__)
 
-def init_db(engine: Engine) -> None:
-    metadata.create_all(engine)
+async def init_db(engine: AsyncEngine) -> None:
+    async with engine.begin() as conn:
+        await conn.run_sync(metadata.create_all)
 
     if engine.name == 'sqlite':
-        with engine.begin() as conn:
-            sqlite_master_result = conn.exec_driver_sql("""
+        async with engine.begin() as conn:
+            sqlite_master_result = await conn.exec_driver_sql("""
                 SELECT name
                 FROM sqlite_master
                 WHERE type='table'
                   AND name NOT LIKE 'sqlite_%';
             """)
-            db_tables = [row[0] for row in sqlite_master_result]
+            rows = sqlite_master_result.all()
+            db_tables = [row[0] for row in rows]
+
             if not db_tables:
                 raise RuntimeError("Database file exists but contains no tables or metadata is empty")
 

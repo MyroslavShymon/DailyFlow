@@ -1,13 +1,13 @@
-import asyncio
 import logging
 
 from aiogram import types, F
 from aiogram.fsm.context import FSMContext
 
+from daily_flow.app.container import Container
 from daily_flow.services.activity.activity_usage.dto import ActivityUsagePeriodDTO
 from daily_flow.ui.telegram.keyboards.activity import ActivityMenu
 from daily_flow.ui.telegram.render.activity import render_activity_usage
-from daily_flow.ui.telegram.runtime import c, router
+from daily_flow.ui.telegram.runtime import router
 from daily_flow.ui.telegram.states import (
     ActivityUsageGetByIdForm,
     ActivityUsageGetByActivityForm,
@@ -25,7 +25,7 @@ async def ask_usage_id(message: types.Message, state: FSMContext):
     await message.answer("Введи **Usage ID**:", reply_markup=ActivityMenu.get(), parse_mode="Markdown")
 
 @router.message(ActivityUsageGetByIdForm.waiting_for_usage_id)
-async def perform_get_usage_by_id(message: types.Message, state: FSMContext):
+async def perform_get_usage_by_id(message: types.Message, state: FSMContext, db_container: Container):
     raw = (message.text or "").strip()
     try:
         usage_id = int(raw)
@@ -33,7 +33,7 @@ async def perform_get_usage_by_id(message: types.Message, state: FSMContext):
         return await message.answer("❌ Usage ID має бути числом. Спробуй ще раз:")
 
     try:
-        usage = await asyncio.to_thread(c.activity_usage_service.get_activity_usage_by_id, usage_id)
+        usage = await db_container.activity_usage_service.get_activity_usage_by_id(usage_id)
         await state.clear()
 
         if not usage:
@@ -52,7 +52,7 @@ async def ask_activity_id_for_usages(message: types.Message, state: FSMContext):
     await message.answer("Введи **Activity ID**, щоб показати історію виконань:", reply_markup=ActivityMenu.get(), parse_mode="Markdown")
 
 @router.message(ActivityUsageGetByActivityForm.waiting_for_activity_id)
-async def perform_get_usages_by_activity(message: types.Message, state: FSMContext):
+async def perform_get_usages_by_activity(message: types.Message, state: FSMContext, db_container: Container):
     raw = (message.text or "").strip()
     try:
         activity_id = int(raw)
@@ -60,7 +60,7 @@ async def perform_get_usages_by_activity(message: types.Message, state: FSMConte
         return await message.answer("❌ Activity ID має бути числом. Спробуй ще раз:")
 
     try:
-        usages = await asyncio.to_thread(c.activity_usage_service.get_activity_usages_by_activity, activity_id)
+        usages = await db_container.activity_usage_service.get_activity_usages_by_activity(activity_id)
         await state.clear()
 
         if not usages:
@@ -82,7 +82,7 @@ async def ask_limit_for_last(message: types.Message, state: FSMContext):
     await message.answer("Введи **limit** (скільки останніх записів показати):", reply_markup=ActivityMenu.get(), parse_mode="Markdown")
 
 @router.message(ActivityUsageLastForm.waiting_for_limit)
-async def perform_get_last_usages(message: types.Message, state: FSMContext):
+async def perform_get_last_usages(message: types.Message, state: FSMContext, db_container: Container):
     raw = (message.text or "").strip()
     try:
         limit = int(raw)
@@ -90,7 +90,7 @@ async def perform_get_last_usages(message: types.Message, state: FSMContext):
         return await message.answer("❌ limit має бути числом. Спробуй ще раз:")
 
     try:
-        usages = await asyncio.to_thread(c.activity_usage_service.get_last_activity_usages, limit)
+        usages = await db_container.activity_usage_service.get_last_activity_usages(limit)
         await state.clear()
 
         if not usages:
@@ -133,7 +133,7 @@ async def ask_period_to(message: types.Message, state: FSMContext):
     )
 
 @router.message(ActivityUsagePeriodForm.waiting_for_date_to)
-async def perform_get_usages_by_period(message: types.Message, state: FSMContext):
+async def perform_get_usages_by_period(message: types.Message, state: FSMContext, db_container: Container):
     data = await state.get_data()
     dt_from = data.get(KEY_DATE_FROM)
 
@@ -147,7 +147,7 @@ async def perform_get_usages_by_period(message: types.Message, state: FSMContext
             date_from = dt_from,
             date_to = dt_to
         )
-        usages = await asyncio.to_thread(c.activity_usage_service.get_activity_usages_by_period, dto)
+        usages = await db_container.activity_usage_service.get_activity_usages_by_period(dto)
 
         await state.clear()
 

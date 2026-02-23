@@ -1,12 +1,12 @@
-import asyncio
 import logging
 
 from aiogram import types, F
 from aiogram.fsm.context import FSMContext
 
+from daily_flow.app.container import Container
 from daily_flow.ui.telegram.keyboards.activity import ActivityMenu
 from daily_flow.ui.telegram.render.activity import render_category_compact, render_activity_compact
-from daily_flow.ui.telegram.runtime import c, router
+from daily_flow.ui.telegram.runtime import router
 from daily_flow.ui.telegram.states import ActivityCategoryGetCategoriesForm, ActivityCategoryGetActivitiesForm
 from daily_flow.ui.telegram.handlers.activity.activity.get import get_all_activities_text
 from daily_flow.ui.telegram.handlers.activity.category.get import get_all_categories_text
@@ -15,10 +15,10 @@ from daily_flow.ui.telegram.utils.truncate_text import truncate_text
 logger = logging.getLogger(__name__)
 
 @router.message(F.text == ActivityMenu.BTN_GET_CATEGORIES_BY_ACTIVITY)
-async def ask_activity_id_for_categories(message: types.Message, state: FSMContext):
+async def ask_activity_id_for_categories(message: types.Message, state: FSMContext, db_container: Container):
     await state.set_state(ActivityCategoryGetCategoriesForm.waiting_for_activity_id)
 
-    activities_text = await get_all_activities_text()
+    activities_text = await get_all_activities_text(db_container)
 
     await message.answer(
         "Введи **Activity ID**, щоб показати категорії цієї активності.\n\n"
@@ -28,7 +28,7 @@ async def ask_activity_id_for_categories(message: types.Message, state: FSMConte
     )
 
 @router.message(ActivityCategoryGetCategoriesForm.waiting_for_activity_id)
-async def perform_get_categories_by_activity(message: types.Message, state: FSMContext):
+async def perform_get_categories_by_activity(message: types.Message, state: FSMContext, db_container: Container):
     raw = (message.text or "").strip()
 
     try:
@@ -37,7 +37,7 @@ async def perform_get_categories_by_activity(message: types.Message, state: FSMC
         return await message.answer("❌ Activity ID має бути числом. Спробуй ще раз:")
 
     try:
-        categories = await asyncio.to_thread(c.activity_category_service.get_categories_by_activity, activity_id)
+        categories = await db_container.activity_category_service.get_categories_by_activity(activity_id)
         await state.clear()
 
         if not categories:
@@ -53,10 +53,10 @@ async def perform_get_categories_by_activity(message: types.Message, state: FSMC
         await message.answer("❌ Сталася помилка під час отримання категорій.", reply_markup=ActivityMenu.get())
 
 @router.message(F.text == ActivityMenu.BTN_GET_ACTIVITIES_BY_CATEGORY_LINK)
-async def ask_category_id_for_activities(message: types.Message, state: FSMContext):
+async def ask_category_id_for_activities(message: types.Message, state: FSMContext, db_container: Container):
     await state.set_state(ActivityCategoryGetActivitiesForm.waiting_for_category_id)
 
-    categories_text = await get_all_categories_text()
+    categories_text = await get_all_categories_text(db_container)
 
     await message.answer(
         "Введи **Category ID**, щоб показати активності в цій категорії.\n\n"
@@ -66,7 +66,7 @@ async def ask_category_id_for_activities(message: types.Message, state: FSMConte
     )
 
 @router.message(ActivityCategoryGetActivitiesForm.waiting_for_category_id)
-async def perform_get_activities_by_category(message: types.Message, state: FSMContext):
+async def perform_get_activities_by_category(message: types.Message, state: FSMContext, db_container: Container):
     raw = (message.text or "").strip()
 
     try:
@@ -75,7 +75,7 @@ async def perform_get_activities_by_category(message: types.Message, state: FSMC
         return await message.answer("❌ Category ID має бути числом. Спробуй ще раз:")
 
     try:
-        activities = await asyncio.to_thread(c.activity_category_service.get_activities_by_category, category_id)
+        activities = await db_container.activity_category_service.get_activities_by_category(category_id)
         await state.clear()
 
         if not activities:

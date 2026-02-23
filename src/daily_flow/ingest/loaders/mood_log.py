@@ -3,7 +3,7 @@ import pandas as pd
 from daily_flow.db.repositories.mood_log_repo import MoodLogRepo, DayPayload, BatchMoodLogUpsertResult
 from daily_flow.ingest.schemas.mood_log import MoodLogIngestContract 
 
-def load_mood_log(
+async def load_mood_log(
         df: pd.DataFrame,
         contract: MoodLogIngestContract ,
         mood_log_repo: MoodLogRepo,
@@ -27,5 +27,5 @@ def load_mood_log(
         } for record in mood_logs_records
     ]
 
-    return mood_log_repo.batch_upsert_mood_logs(payload=mood_logs_batch_payload)
+    return await mood_log_repo.batch_upsert_mood_logs(payload=mood_logs_batch_payload)
 

@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime
 from pathlib import Path
 from typing import Union, Any, Optional
@@ -9,7 +10,7 @@ from daily_flow.utils.hash import calculate_file_hash
 
 # def ingest_skip_check():І
 
-def ingest_run(
+async def ingest_run(
         ingest_run_repo: IngestRunRepo,
         dataset: str,
         source_type: IngestSourceType,
@@ -23,7 +24,7 @@ def ingest_run(
     if not path.is_file():
         raise FileNotFoundError(f"Can't ingest a non-existent file: {file_path}")
 
-    file_hash = calculate_file_hash(path)
+    file_hash = await asyncio.to_thread(calculate_file_hash, path)
 
     base_params = {
         "dataset": dataset,
@@ -44,10 +45,10 @@ def ingest_run(
             metrics=metrics,
             finished_at=end_time
         )
-        return ingest_run_repo.add_ingest(ingest_run_result)
+        return await ingest_run_repo.add_ingest(ingest_run_result)
 
 
-    is_already_ingest = ingest_run_repo.is_already_processed(file_hash)
+    is_already_ingest = await ingest_run_repo.is_already_processed(file_hash)
     if not is_already_ingest and end_time is None:
         return False
     elif is_already_ingest and end_time is None:
@@ -67,4 +68,4 @@ def ingest_run(
             finished_at=end_time
         )
 
-    return ingest_run_repo.add_ingest(ingest_run_result)
+    return await ingest_run_repo.add_ingest(ingest_run_result)

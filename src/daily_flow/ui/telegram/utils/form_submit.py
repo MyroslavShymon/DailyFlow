@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from typing import TypeVar, Callable, Type
+from typing import TypeVar, Callable, Type, Awaitable
 
 from aiogram import types, F, Bot
 from aiogram.fsm.context import FSMContext
@@ -25,7 +25,7 @@ async def form_submit(
         values_to_upsert: list[str],
         dto_class: Type[DTO],
         mapping: dict[str, str],
-        upsert_func: Callable[[DTO], T],
+        upsert_func: Callable[[DTO], Awaitable[T]],
         render_func: Callable[..., str]
 ):
     await callback.answer()
@@ -51,7 +51,7 @@ async def form_submit(
             callback=callback
         )
         if dto:
-            saved = await asyncio.to_thread(upsert_func, dto)
+            saved = await upsert_func(dto)
             if saved:
                 await bot.delete_message(
                     chat_id=last_chat_id,

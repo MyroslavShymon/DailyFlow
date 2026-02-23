@@ -1,12 +1,12 @@
-import asyncio
 import logging
 
 from aiogram import types, F
 from aiogram.fsm.context import FSMContext
 
+from daily_flow.app.container import Container
 from daily_flow.services.activity.activity_category.dto import CategoryToActivityDTO
 from daily_flow.ui.telegram.keyboards.activity import ActivityMenu
-from daily_flow.ui.telegram.runtime import c, router
+from daily_flow.ui.telegram.runtime import router
 from daily_flow.ui.telegram.states import ActivityCategoryAssignDeleteForm
 
 
@@ -32,7 +32,7 @@ async def delete_category_from_activity_step1(message: types.Message, state: FSM
     await message.answer("Тепер введи **Category ID**, яку треба прибрати:", reply_markup=ActivityMenu.get(), parse_mode="Markdown")
 
 @router.message(ActivityCategoryAssignDeleteForm.waiting_for_category_id)
-async def delete_category_from_activity_step2(message: types.Message, state: FSMContext):
+async def delete_category_from_activity_step2(message: types.Message, state: FSMContext, db_container: Container):
     data = await state.get_data()
     activity_id = data.get(KEY_ACTIVITY_ID)
 
@@ -48,7 +48,7 @@ async def delete_category_from_activity_step2(message: types.Message, state: FSM
             activity_id = activity_id
         )
 
-        deleted = await asyncio.to_thread(c.activity_category_service.delete_category_from_activity, dto)  # process_dto не використовуємо у delete
+        deleted = await db_container.activity_category_service.delete_category_from_activity(dto)  # process_dto не використовуємо у delete
         await state.clear()
 
         if deleted > 0:

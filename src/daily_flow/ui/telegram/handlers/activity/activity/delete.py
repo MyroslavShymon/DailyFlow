@@ -1,11 +1,11 @@
-import asyncio
 import logging
 
 from aiogram import types, F
 from aiogram.fsm.context import FSMContext
 
+from daily_flow.app.container import Container
 from daily_flow.ui.telegram.keyboards.activity import ActivityMenu
-from daily_flow.ui.telegram.runtime import c, router
+from daily_flow.ui.telegram.runtime import router
 from daily_flow.ui.telegram.states import ActivityDeleteForm
 from daily_flow.ui.telegram.handlers.activity.activity.get import get_all_activities_text
 
@@ -13,10 +13,10 @@ from daily_flow.ui.telegram.handlers.activity.activity.get import get_all_activi
 logger = logging.getLogger(__name__)
 
 @router.message(F.text == ActivityMenu.BTN_DELETE_ACTIVITY)
-async def delete_activity(message: types.Message, state: FSMContext):
+async def delete_activity(message: types.Message, state: FSMContext, db_container: Container):
     await state.set_state(ActivityDeleteForm.waiting_for_ref)
 
-    activities_text = await get_all_activities_text()
+    activities_text = await get_all_activities_text(db_container)
 
     await message.answer(
         "Введи **ID** або **назву (title)** активності, яку треба видалити.\n\n"
@@ -27,16 +27,16 @@ async def delete_activity(message: types.Message, state: FSMContext):
 
 
 @router.message(ActivityDeleteForm.waiting_for_ref)
-async def perform_delete_activity(message: types.Message, state: FSMContext):
+async def perform_delete_activity(message: types.Message, state: FSMContext, db_container: Container):
     ref = (message.text or "").strip()
     if not ref:
         return await message.answer("❌ Введи ID або title ще раз:")
 
     try:
         if ref.isdigit():
-            deleted = await asyncio.to_thread(c.activity_service.delete_activity_by_id, int(ref))
+            deleted = await db_container.activity_service.delete_activity_by_id(int(ref))
         else:
-            deleted = await asyncio.to_thread(c.activity_service.delete_activity_by_title, ref)
+            deleted = await db_container.activity_service.delete_activity_by_title(ref)
 
         await state.clear()
 

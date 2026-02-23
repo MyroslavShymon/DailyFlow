@@ -14,7 +14,7 @@ from daily_flow.ingest.transforms.mood_log import normalize_mood_log
 from daily_flow.ingest.validators.mood_log.validator import validate_mood_log
 
 
-def mood_log_runner(
+async def mood_log_runner(
         file_path: Union[str, Path],
         contract: MoodLogIngestContract ,
         ingest_run_repo: IngestRunRepo,
@@ -31,7 +31,7 @@ def mood_log_runner(
     result_metrics = None
 
     try:
-        ingest_result = ingest_run(**base_ingest_params)
+        ingest_result = await ingest_run(**base_ingest_params)
         if ingest_result and ingest_result.status == IngestStatusType.SKIPPED:
             return IngestStatusType.SKIPPED
 
@@ -49,25 +49,27 @@ def mood_log_runner(
             bad_action="quarantine"
         )
 
-        batch_upsert_result = load_mood_log(
+        batch_upsert_result = await load_mood_log(
             df=clean_result.df_clean,
             contract=contract,
             mood_log_repo=mood_log_repo
         )
 
         if batch_upsert_result:
-            return ingest_run(
+            ingest_run_result = await ingest_run(
                 **base_ingest_params,
                 end_time=datetime.now(),
                 metrics=result_metrics
-            ).status
+            )
+            return ingest_run_result.status
     except Exception as e:
         end_time = datetime.now()
         msg = str(getattr(e, "orig", e)).lower()
 
-        return ingest_run(
+        ingest_run_result = await ingest_run(
             **base_ingest_params,
             end_time=end_time,
             error_message=msg,
             metrics=result_metrics
-        ).status
+        )
+        return ingest_run_result.status

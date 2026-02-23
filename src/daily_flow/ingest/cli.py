@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Union
 
-from sqlalchemy.engine import Engine
+from sqlalchemy.ext.asyncio import AsyncEngine
 
 from daily_flow.config.db import DbSettings
 from daily_flow.db.engine import build_engine
@@ -20,11 +20,11 @@ from daily_flow.ingest.schemas.mood_log import MoodLogIngestContract
 @dataclass(frozen=True)
 class IngestCLI:
     db_settings: DbSettings
-    engine: Engine
+    engine: AsyncEngine
 
     ingest_run_repo: IngestRunRepo
 
-def build_ingest_cli(
+async def build_ingest_cli(
         file_path: Union[str, Path],
         contract: BaseIngestContract,
         db_settings: DbSettings
@@ -35,14 +35,14 @@ def build_ingest_cli(
     )
 
     if db_settings.auto_init_db:
-        init_db(engine)
+        await init_db(engine)
 
     ingest_run_repo = IngestRunRepo(engine)
 
     if isinstance(contract, MoodLogIngestContract):
         mood_log_repo = MoodLogRepo(engine)
 
-        mood_log_runner(
+        await mood_log_runner(
             file_path=file_path,
             contract=contract,
             ingest_run_repo=ingest_run_repo,
@@ -52,7 +52,7 @@ def build_ingest_cli(
     if isinstance(contract, CommonMoodLogIngestContract):
         common_mood_log_repo = CommonMoodLogRepo(engine)
 
-        common_mood_log_runner(
+        await common_mood_log_runner(
             file_path=file_path,
             contract=contract,
             ingest_run_repo=ingest_run_repo,
