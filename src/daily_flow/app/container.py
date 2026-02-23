@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 
 from daily_flow.config.db import DbSettings
 from daily_flow.db.engine import build_engine
+from daily_flow.db.init import init_db
 from daily_flow.db.repositories.activity.activity_category_repo import ActivityCategoryRepo
 from daily_flow.db.repositories.activity.activity_repo import ActivityRepo
 from daily_flow.db.repositories.activity.activity_usage_repo import ActivityUsageRepo
@@ -39,11 +40,14 @@ class Container:
     activity_category_service: ActivityCategoryService
     activity_usage_service: ActivityUsageService
 
-def build_container(db_settings: DbSettings) -> Container:
-    engine = build_engine(
+async def build_container(db_settings: DbSettings) -> Container:
+    engine = await build_engine(
         database_url=db_settings.db_url,
         is_database_echo=db_settings.is_sql_echo
     )
+
+    if db_settings.auto_init_db:
+        await init_db(engine)
 
     mood_log_repo = MoodLogRepo(engine)
     common_mood_log_repo = CommonMoodLogRepo(engine)

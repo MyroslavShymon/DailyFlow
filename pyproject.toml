@@ -24,7 +24,5 @@ dev = [
     "pre-commit>=4.5,<4.6"
 ]
 [project.scripts]
-start_bot = "daily_flow.entrypoints.bot_main:main"
+start_telegram_bot = "daily_flow.entrypoints.telegram_bot_main:main"
 ingest = "daily_flow.entrypoints.ingest_main:main"
-#daily-flow = "daily_flow.__main__:main"
-#init-db = "daily_flow.db.init:init_db"

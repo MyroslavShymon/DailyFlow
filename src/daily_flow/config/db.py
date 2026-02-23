@@ -13,10 +13,12 @@ class DbSettings:
 
 def load_db_settings() -> DbSettings:
     load_dotenv(ENV_PATH)
+
     db_file = DATA_DIR / "app.db"
-    default_db_url = f"sqlite:///{db_file}"
+    default_db_url = f"sqlite+aiosqlite:///{db_file}"
 
     db_url = os.getenv("DATABASE_URL", default_db_url)
+
     auto_init = os.getenv("AUTO_INIT_DB", "1") == "1"
     echo = os.getenv("SQL_ECHO", "1") == "1"
 

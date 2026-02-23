@@ -29,7 +29,7 @@ async def build_ingest_cli(
         contract: BaseIngestContract,
         db_settings: DbSettings
 ) -> IngestCLI:
-    engine = build_engine(
+    engine = await build_engine(
         database_url=db_settings.db_url,
         is_database_echo=db_settings.is_sql_echo
     )
