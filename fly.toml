@@ -1,0 +1,14 @@
+app = "daily-flow-bot"
+primary_region = "fra"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  AUTO_INIT_DB = "1"
+  SQL_ECHO = "0"
+  LOG_LEVEL="INFO"
+
+[mounts]
+  source = "dailyflow_data"
+  destination = "/data"
