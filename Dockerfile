@@ -10,6 +10,7 @@ COPY pyproject.toml ./
 RUN pip install --no-cache-dir -U pip \
  && pip install --no-cache-dir ".[ui]"
 
+COPY scripts/ ./scripts
 COPY src/ ./src
 
 RUN pip install --no-cache-dir .
