@@ -21,7 +21,10 @@ jobs:
         run: |
           curl -L https://fly.io/install.sh | sh
           echo "$HOME/.fly/bin" >> $GITHUB_PATH
-          flyctl version
+          echo "$HOME/.fly" >> $GITHUB_PATH
+          ls -lah "$HOME/.fly" || true
+          ls -lah "$HOME/.fly/bin" || true
+          "$HOME/.fly/bin/flyctl" version
       - name: Authenticate to Fly
         run: |
           flyctl auth token
