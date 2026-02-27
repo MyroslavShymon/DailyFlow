@@ -37,7 +37,7 @@ jobs:
           "
       - name: Get latest backup filename
         run: |
-          LATEST=$(flyctl ssh console -a daily-flow-bot -C "ls -t /data/backups/dailyflow_*.sqlite3.gz 2>/dev/null | head -n 1")
+          LATEST=$(flyctl ssh console -a daily-flow-bot -C 'sh -lc "ls -t /data/backups/dailyflow_*.sqlite3.gz 2>/dev/null | head -n 1"')
 
           if [ -z "$LATEST" ]; then
             echo "No backup file found!"
@@ -46,8 +46,8 @@ jobs:
 
           echo "Latest backup: $LATEST"
           echo "LATEST_BACKUP=$LATEST" >> $GITHUB_ENV
-          
-          LOCAL_FILE=$(basename $LATEST)
+
+          LOCAL_FILE=$(basename "$LATEST")
           echo "LOCAL_BACKUP=$LOCAL_FILE" >> $GITHUB_ENV
       - name: Download backup from Fly
         run: |
