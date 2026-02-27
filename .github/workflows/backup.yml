@@ -51,13 +51,14 @@ jobs:
           echo "LOCAL_BACKUP=$LOCAL_FILE" >> $GITHUB_ENV
       - name: Download backup from Fly
         run: |
+          rm -f "$LOCAL_BACKUP"
           flyctl ssh sftp get -a daily-flow-bot "$LATEST_BACKUP" .
-
+      
           if [ ! -f "$LOCAL_BACKUP" ]; then
             echo "Download failed!"
             exit 1
           fi
-
+      
           echo "Downloaded file:"
           ls -lah "$LOCAL_BACKUP"
       - name: Upload backup artifact
