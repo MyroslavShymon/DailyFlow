@@ -1,0 +1,65 @@
+name: DailyFlow Backup
+
+on:
+  workflow_dispatch:
+
+  schedule:
+    - cron: "0 6 * * *"
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    env:
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+    steps:
+      - name: Show runner time
+        run: |
+          date -u
+          date
+      - name: Install flyctl
+        run: |
+          curl -L https://fly.io/install.sh | sh
+          echo "$HOME/.fly/bin" >> $GITHUB_PATH
+          flyctl version
+      - name: Authenticate to Fly
+        run: |
+          flyctl auth token
+      - name: Run backup on Fly
+        run: |
+          flyctl ssh console -a daily-flow-bot -C "
+            python -m scripts.backup.main \
+              --db /data/app.db \
+              --out /data/backups
+          "
+      - name: Get latest backup filename
+        run: |
+          LATEST=$(flyctl ssh console -a daily-flow-bot -C "ls -t /data/backups/dailyflow_*.sqlite3.gz 2>/dev/null | head -n 1")
+
+          if [ -z "$LATEST" ]; then
+            echo "No backup file found!"
+            exit 1
+          fi
+
+          echo "Latest backup: $LATEST"
+          echo "LATEST_BACKUP=$LATEST" >> $GITHUB_ENV
+          
+          LOCAL_FILE=$(basename $LATEST)
+          echo "LOCAL_BACKUP=$LOCAL_FILE" >> $GITHUB_ENV
+      - name: Download backup from Fly
+        run: |
+          flyctl ssh sftp get -a daily-flow-bot "$LATEST_BACKUP" .
+
+          if [ ! -f "$LOCAL_BACKUP" ]; then
+            echo "Download failed!"
+            exit 1
+          fi
+
+          echo "Downloaded file:"
+          ls -lah "$LOCAL_BACKUP"
+      - name: Upload backup artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dailyflow-backup-${{ github.run_number }}
+          path: ${{ env.LOCAL_BACKUP }}
+          retention-days: 30
