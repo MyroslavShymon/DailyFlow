@@ -52,7 +52,8 @@ jobs:
       - name: Download backup from Fly
         run: |
           rm -f "$LOCAL_BACKUP"
-          flyctl ssh sftp get -a daily-flow-bot "$LATEST_BACKUP" .
+      
+          flyctl ssh sftp get -a daily-flow-bot "$LATEST_BACKUP" "$LOCAL_BACKUP"
       
           if [ ! -f "$LOCAL_BACKUP" ]; then
             echo "Download failed!"
