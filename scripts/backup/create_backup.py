@@ -1,10 +1,10 @@
+import datetime
+import gzip
 import os
 import shutil
 import sqlite3
 import tempfile
 from dataclasses import dataclass, replace
-import gzip
-import datetime
 from pathlib import Path
 from typing import Literal
 
@@ -12,6 +12,7 @@ from .utils import calculate_file_hash
 
 BackupStatus = Literal["success", "fail"]
 IntegrityCheck = Literal["ok", "fail"]
+
 
 @dataclass(frozen=True)
 class BackupResult:
@@ -26,11 +27,12 @@ class BackupResult:
     file_hash: str | None = None
     file_size: int | None = None
 
+
 def create_backup(db_path: str, out_dir: str) -> BackupResult:
     tmp_path: str | None = None
 
     current_datetime = datetime.datetime.now(tz=datetime.UTC)
-    created_at = current_datetime.strftime('%Y-%m-%d_%H-%M')
+    created_at = current_datetime.strftime("%Y-%m-%d_%H-%M")
 
     backup_filename = f"dailyflow_{created_at}.sqlite3.gz"
 
@@ -61,8 +63,8 @@ def create_backup(db_path: str, out_dir: str) -> BackupResult:
             return replace(
                 backup_default_result,
                 integrity_check=integrity_check,
-                error_message = integrity_check_error,
-                status = "fail"
+                error_message=integrity_check_error,
+                status="fail",
             )
 
         full_path = Path(out_dir) / backup_filename
@@ -71,17 +73,15 @@ def create_backup(db_path: str, out_dir: str) -> BackupResult:
             # mtime=0 робить хеш файлу стабільним, якщо вміст БД не змінився
             with gzip.GzipFile(fileobj=f_raw, mode="wb", mtime=0, compresslevel=9) as f_out:
                 with open(tmp_path, "rb") as f_in:
-                    shutil.copyfileobj(f_in, f_out) # Ефективніше за f_out.write(f_in.read()), пише потроху
+                    shutil.copyfileobj(
+                        f_in, f_out
+                    )  # Ефективніше за f_out.write(f_in.read()), пише потроху
 
         file_size_bytes = os.path.getsize(full_path)
 
         file_hash = calculate_file_hash(full_path)
 
-        return replace(
-            backup_default_result,
-            file_hash=file_hash,
-            file_size=file_size_bytes
-        )
+        return replace(backup_default_result, file_hash=file_hash, file_size=file_size_bytes)
     except sqlite3.Error as e:
         print(f"Database error during backup: {e}")
         return replace(

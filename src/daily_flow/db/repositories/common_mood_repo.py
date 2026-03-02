@@ -1,20 +1,27 @@
 import logging
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import date, datetime
-from typing import Optional, Any, Mapping, TypedDict
+from typing import Any, TypedDict
 
-from sqlalchemy.ext.asyncio import AsyncEngine
-from sqlalchemy import select, delete, and_, func, CursorResult
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy import CursorResult, and_, delete, func, select
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncEngine
 
-from daily_flow.db.errors import EmptyUpsertPayloadError, UnknownFieldError, MissingRequiredFieldError, \
-    map_integrity_error, InvalidScoreError, ParentNotFoundError
+from daily_flow.db.errors import (
+    EmptyUpsertPayloadError,
+    InvalidScoreError,
+    MissingRequiredFieldError,
+    ParentNotFoundError,
+    UnknownFieldError,
+    map_integrity_error,
+)
 from daily_flow.db.repositories.mood_log_repo import NON_UPDATABLE
 from daily_flow.db.schema import common_mood_log, mood_tag_impact
 
 ALLOWED_COMMON_MOOD_FIELDS = {"mood", "note"}
-COMMON_MOOD_NON_UPDATABLE = {'day', 'id', 'created_at'}
+COMMON_MOOD_NON_UPDATABLE = {"day", "id", "created_at"}
 ALLOWED_MOOD_TAG_FIELDS = {"tag", "impact"}
 
 logger = logging.getLogger(__name__)
@@ -25,7 +32,7 @@ class CommonMoodLog:
     id: int
     day: date
     mood: int
-    note: Optional[str]
+    note: str | None
     created_at: datetime
 
 
@@ -38,8 +45,8 @@ class MoodTagImpact:
 
 
 class CommonMoodLogValues(TypedDict):
-    mood: Optional[int | None]
-    note: Optional[str | None]
+    mood: int | None | None
+    note: str | None | None
 
 
 class DayPayload(TypedDict):
@@ -79,9 +86,7 @@ class CommonMoodLogRepo:
         )
 
     @staticmethod
-    def _common_mood_log_payload_validator(
-            payload: dict[str, Any]
-    ) -> None:
+    def _common_mood_log_payload_validator(payload: dict[str, Any]) -> None:
         if not payload or all(p is None for p in payload.values()):
             raise EmptyUpsertPayloadError("No fields to upsert")
         unknown_keys = set(payload) - ALLOWED_COMMON_MOOD_FIELDS
@@ -89,9 +94,7 @@ class CommonMoodLogRepo:
             raise UnknownFieldError(f"Unknown fields: {','.join(unknown_keys)}")
 
     async def upsert_common_mood_log_by_day(
-            self,
-            day: date,
-            payload: dict[str, Any]
+        self, day: date, payload: dict[str, Any]
     ) -> CommonMoodLog:
         self._common_mood_log_payload_validator(payload=payload)
 
@@ -102,10 +105,11 @@ class CommonMoodLogRepo:
                     if not isinstance(mood, int) or not (1 <= mood <= 7):
                         raise InvalidScoreError("mood must be int between 1 and 7")
 
-                exists = (await conn.execute(
-                    select(common_mood_log.c.id)
-                    .where(common_mood_log.c.day == day)
-                )).first()
+                exists = (
+                    await conn.execute(
+                        select(common_mood_log.c.id).where(common_mood_log.c.day == day)
+                    )
+                ).first()
 
                 if not exists and payload.get("mood") is None:
                     raise MissingRequiredFieldError("mood is required for the first insert")
@@ -115,7 +119,7 @@ class CommonMoodLogRepo:
                     .values(day=day, **payload)
                     .on_conflict_do_update(
                         index_elements=[common_mood_log.c.day],
-                        set_={k: p for k, p in payload.items() if p is not None}
+                        set_={k: p for k, p in payload.items() if p is not None},
                     )
                     .returning(*common_mood_log.c)
                 )
@@ -125,16 +129,19 @@ class CommonMoodLogRepo:
                 return self._to_common_mood_log(row)
         except IntegrityError as e:
             logger.exception(
-                "CommonMoodLogRepo.upsert_common_mood_log_by_day failed "
-                "(day=%s, fields=%s)",
+                "CommonMoodLogRepo.upsert_common_mood_log_by_day failed (day=%s, fields=%s)",
                 day,
                 list(payload.keys()),
             )
             raise map_integrity_error(e, common_mood_log.name) from e
 
-    async def batch_upsert_common_mood_logs(self, payload: list[DayPayload]) -> BatchCommonMoodLogUpsertResult:
+    async def batch_upsert_common_mood_logs(
+        self, payload: list[DayPayload]
+    ) -> BatchCommonMoodLogUpsertResult:
         if not payload:
-            return BatchCommonMoodLogUpsertResult(rows_in=0, rows_written=0, min_day=None, max_day=None)
+            return BatchCommonMoodLogUpsertResult(
+                rows_in=0, rows_written=0, min_day=None, max_day=None
+            )
 
         flattened_data = []
         for p in payload:
@@ -144,22 +151,20 @@ class CommonMoodLogRepo:
             flattened_data.append({"day": p["day"], **p["values"]})
 
         rows_in = len(payload)
-        min_day = min(p['day'] for p in payload)
-        max_day = max(p['day'] for p in payload)
+        min_day = min(p["day"] for p in payload)
+        max_day = max(p["day"] for p in payload)
 
         stmt = sqlite_insert(common_mood_log).values(flattened_data)
 
         upsert_stmt = stmt.on_conflict_do_update(
             index_elements=[common_mood_log.c.day],
             set_={
-                table_col.name:
-                    func.coalesce(
-                        stmt.excluded[table_col.name],
-                        common_mood_log.c[table_col.name]
-                    )
+                table_col.name: func.coalesce(
+                    stmt.excluded[table_col.name], common_mood_log.c[table_col.name]
+                )
                 for table_col in common_mood_log.c
                 if table_col.name not in NON_UPDATABLE
-            }
+            },
         )
 
         try:
@@ -168,39 +173,25 @@ class CommonMoodLogRepo:
                 rows_written = int(res.rowcount or 0)
 
                 return BatchCommonMoodLogUpsertResult(
-                    rows_in=rows_in,
-                    rows_written=rows_written,
-                    min_day=min_day,
-                    max_day=max_day
+                    rows_in=rows_in, rows_written=rows_written, min_day=min_day, max_day=max_day
                 )
         except IntegrityError as e:
             logger.exception(
-                "CommonMoodLogRepo.batch_upsert_common_mood_logs failed "
-                "(min_day=%s, max_day=%s)",
+                "CommonMoodLogRepo.batch_upsert_common_mood_logs failed (min_day=%s, max_day=%s)",
                 str(min_day),
                 str(max_day),
             )
             raise map_integrity_error(e, common_mood_log.name) from e
 
-
     async def get_common_mood_log_by_day(self, day: date) -> CommonMoodLog | None:
-        stmt = (
-            select(*common_mood_log.c)
-            .where(common_mood_log.c.day == day)
-            .limit(1)
-        )
+        stmt = select(*common_mood_log.c).where(common_mood_log.c.day == day).limit(1)
 
         async with self._engine.connect() as conn:
             res = await conn.execute(stmt)
             row = res.mappings().one_or_none()
             return self._to_common_mood_log(row) if row else None
 
-
-    async def upsert_tag_by_day(
-            self,
-            day: date,
-            payload: dict[str, Any]
-    ) -> MoodTagImpact:
+    async def upsert_tag_by_day(self, day: date, payload: dict[str, Any]) -> MoodTagImpact:
         if not payload or all(p is None for p in payload.values()):
             raise EmptyUpsertPayloadError("No fields to upsert")
 
@@ -210,10 +201,11 @@ class CommonMoodLogRepo:
 
         try:
             async with self._engine.begin() as conn:
-                common_mood_id: int | None = (await conn.execute(
-                    select(common_mood_log.c.id)
-                    .where(common_mood_log.c.day == day)
-                )).scalar()
+                common_mood_id: int | None = (
+                    await conn.execute(
+                        select(common_mood_log.c.id).where(common_mood_log.c.day == day)
+                    )
+                ).scalar()
 
                 if not common_mood_id:
                     raise ParentNotFoundError(f"There is no common mood log in this day: {day}")
@@ -241,8 +233,11 @@ class CommonMoodLogRepo:
                     sqlite_insert(mood_tag_impact)
                     .values(**insert_data)
                     .on_conflict_do_update(
-                        index_elements=[mood_tag_impact.c.common_mood_log_id, mood_tag_impact.c.tag],
-                        set_={"impact": impact}
+                        index_elements=[
+                            mood_tag_impact.c.common_mood_log_id,
+                            mood_tag_impact.c.tag,
+                        ],
+                        set_={"impact": impact},
                     )
                     .returning(*mood_tag_impact.c)
                 )
@@ -252,20 +247,17 @@ class CommonMoodLogRepo:
                 return self._to_mood_tag_impact(raw)
         except IntegrityError as e:
             logger.exception(
-                "CommonMoodLogRepo.upsert_tag_for_day failed "
-                "(day=%s, fields=%s)",
+                "CommonMoodLogRepo.upsert_tag_for_day failed (day=%s, fields=%s)",
                 day,
                 list(payload.keys()),
             )
             raise map_integrity_error(e, mood_tag_impact.name) from e
 
-
     async def get_tags_by_day(self, day: date) -> list[MoodTagImpact]:
         async with self._engine.connect() as conn:
-            common_mood_id: int | None = (await conn.execute(
-                select(common_mood_log.c.id)
-                .where(common_mood_log.c.day == day)
-            )).scalar()
+            common_mood_id: int | None = (
+                await conn.execute(select(common_mood_log.c.id).where(common_mood_log.c.day == day))
+            ).scalar()
 
             if not common_mood_id:
                 return []
@@ -280,42 +272,32 @@ class CommonMoodLogRepo:
             rows = res.mappings().all()
             return [self._to_mood_tag_impact(row) for row in rows]
 
-
     async def delete_tag_by_day(self, day: date, tag: str) -> int:
         tag = tag.strip().lower()
         if not tag:
             raise MissingRequiredFieldError("tag is required")
 
         async with self._engine.begin() as conn:
-            common_mood_id: int | None = (await conn.execute(
-                select(common_mood_log.c.id)
-                .where(common_mood_log.c.day == day)
-            )).scalar()
+            common_mood_id: int | None = (
+                await conn.execute(select(common_mood_log.c.id).where(common_mood_log.c.day == day))
+            ).scalar()
 
             if not common_mood_id:
                 raise ParentNotFoundError(f"There is no common mood log in this day: {day}")
 
-            stmt = (
-                delete(mood_tag_impact)
-                .where(
-                    and_(
-                        mood_tag_impact.c.common_mood_log_id == common_mood_id,
-                        mood_tag_impact.c.tag == tag
-                    )
+            stmt = delete(mood_tag_impact).where(
+                and_(
+                    mood_tag_impact.c.common_mood_log_id == common_mood_id,
+                    mood_tag_impact.c.tag == tag,
                 )
             )
 
             res: CursorResult = await conn.execute(stmt)
             return int(res.rowcount or 0)
 
-
     async def get_all_unique_tags(self) -> list[str]:
         async with self._engine.connect() as conn:
-            stmt = (
-                select(mood_tag_impact.c.tag)
-                .distinct()
-                .order_by(mood_tag_impact.c.tag)
-            )
+            stmt = select(mood_tag_impact.c.tag).distinct().order_by(mood_tag_impact.c.tag)
 
             res = await conn.execute(stmt)
             rows = res.scalars().all()

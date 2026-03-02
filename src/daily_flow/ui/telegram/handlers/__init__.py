@@ -1,8 +1,12 @@
-from . import mood_log
-from . import activity
-from . import start
-from . import common
-from . import common_mood_log
-from . import date
-from . import idea
-from . import submit_form
+from . import activity, common, common_mood_log, date, idea, mood_log, start, submit_form
+
+__all__ = [
+    "activity",
+    "common",
+    "common_mood_log",
+    "date",
+    "idea",
+    "mood_log",
+    "start",
+    "submit_form",
+]

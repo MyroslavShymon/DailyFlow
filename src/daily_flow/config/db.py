@@ -1,8 +1,9 @@
-from dataclasses import dataclass
-from dotenv import load_dotenv
 import os
+from dataclasses import dataclass
 
-from daily_flow.config.paths import ENV_PATH, DATA_DIR
+from dotenv import load_dotenv
+
+from daily_flow.config.paths import DATA_DIR, ENV_PATH
 
 
 @dataclass(frozen=True)
@@ -10,6 +11,7 @@ class DbSettings:
     db_url: str
     auto_init_db: bool = True
     is_sql_echo: bool = True
+
 
 def load_db_settings() -> DbSettings:
     load_dotenv(ENV_PATH)

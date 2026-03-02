@@ -1,5 +1,6 @@
 import logging
 from pathlib import Path
+
 import pandas as pd
 
 from daily_flow.ingest.schemas.mood_log import MoodLogIngestContract
@@ -21,12 +22,12 @@ column_mapping = {
     "Сон": "sleep",
 }
 
-def read_mood_log_excel(path: Path, contract: MoodLogIngestContract) -> list[dict[str, pd.DataFrame | str]]:
+
+def read_mood_log_excel(
+    path: Path, contract: MoodLogIngestContract
+) -> list[dict[str, pd.DataFrame | str]]:
     all_sheets = pd.read_excel(
-        path,
-        sheet_name=contract.sheets or None,
-        engine="openpyxl",
-        header=[0]
+        path, sheet_name=contract.sheets or None, engine="openpyxl", header=[0]
     )
 
     if not contract.sheets and isinstance(all_sheets, dict):

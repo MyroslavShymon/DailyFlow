@@ -1,15 +1,14 @@
-import asyncio
 import logging
 
-from aiogram import types, F
+from aiogram import F, types
 
 from daily_flow.app.container import Container
 from daily_flow.ui.telegram.keyboards.idea import IdeaMenu
 from daily_flow.ui.telegram.render.idea import render_sphere
 from daily_flow.ui.telegram.runtime import router
 
-
 logger = logging.getLogger(__name__)
+
 
 async def get_all_spheres_text(db_container: Container) -> str:
     spheres = await db_container.idea_service.get_all_spheres()
@@ -29,4 +28,6 @@ async def get_all_spheres(message: types.Message, db_container: Container):
         await message.answer(text, reply_markup=IdeaMenu.get(), parse_mode="Markdown")
     except Exception as e:
         logger.exception("Sphere get_all_spheres failed: %s", e)
-        await message.answer("❌ Сталася помилка під час отримання сфер.", reply_markup=IdeaMenu.get())
+        await message.answer(
+            "❌ Сталася помилка під час отримання сфер.", reply_markup=IdeaMenu.get()
+        )

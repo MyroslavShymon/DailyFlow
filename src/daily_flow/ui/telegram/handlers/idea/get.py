@@ -1,17 +1,17 @@
 import logging
 
-from aiogram import types, F
+from aiogram import F, types
 from aiogram.fsm.context import FSMContext
 
 from daily_flow.app.container import Container
+from daily_flow.ui.telegram.handlers.idea.sphere.get import get_all_spheres_text
 from daily_flow.ui.telegram.keyboards.idea import IdeaMenu
 from daily_flow.ui.telegram.render.idea import render_idea
 from daily_flow.ui.telegram.runtime import router
 from daily_flow.ui.telegram.states import IdeaBySphereGetForm
-from daily_flow.ui.telegram.handlers.idea.sphere.get import get_all_spheres_text
-
 
 logger = logging.getLogger(__name__)
+
 
 async def get_all_ideas_text(db_container: Container) -> str:
     ideas = await db_container.idea_service.get_all_ideas()
@@ -34,18 +34,21 @@ async def get_all_ideas(message: types.Message, db_container: Container):
         await message.answer(text, reply_markup=IdeaMenu.get(), parse_mode="Markdown")
     except Exception as e:
         logger.exception("Idea get_all_ideas failed: %s", e)
-        await message.answer("❌ Сталася помилка під час отримання списку ідей.", reply_markup=IdeaMenu.get())
+        await message.answer(
+            "❌ Сталася помилка під час отримання списку ідей.", reply_markup=IdeaMenu.get()
+        )
 
 
 @router.message(F.text == IdeaMenu.BTN_IDEAS_BY_SPHERE)
-async def ask_sphere_id_for_ideas(message: types.Message, state: FSMContext, db_container: Container):
+async def ask_sphere_id_for_ideas(
+    message: types.Message, state: FSMContext, db_container: Container
+):
     await state.set_state(IdeaBySphereGetForm.waiting_for_sphere_id)
 
     spheres_text = await get_all_spheres_text(db_container)
 
     await message.answer(
-        "Введи **ID сфери**, щоб показати ідеї в ній.\n\n"
-        f"{spheres_text}",
+        f"Введи **ID сфери**, щоб показати ідеї в ній.\n\n{spheres_text}",
         reply_markup=IdeaMenu.get(),
         parse_mode="Markdown",
     )
@@ -73,13 +76,12 @@ async def show_ideas_by_sphere(message: types.Message, state: FSMContext, db_con
 
         ideas_text = "\n".join(render_idea(i) for i in ideas)
 
-        text = (
-            f"📌 **Ідеї за сферою ID={sphere_id}**\n\n"
-            + ideas_text
-        )
+        text = f"📌 **Ідеї за сферою ID={sphere_id}**\n\n" + ideas_text
         await message.answer(text, reply_markup=IdeaMenu.get(), parse_mode="Markdown")
 
     except Exception as e:
         logger.exception("Idea get_ideas_by_sphere failed: %s", e)
         await state.clear()
-        await message.answer("❌ Сталася помилка під час отримання ідей за сферою.", reply_markup=IdeaMenu.get())
+        await message.answer(
+            "❌ Сталася помилка під час отримання ідей за сферою.", reply_markup=IdeaMenu.get()
+        )

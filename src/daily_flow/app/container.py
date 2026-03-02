@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from daily_flow.config.db import DbSettings
@@ -18,6 +19,7 @@ from daily_flow.services.activity.category.service import CategoryService
 from daily_flow.services.common_mood.service import CommonMoodLogService
 from daily_flow.services.idea.service import IdeaService
 from daily_flow.services.mood_log.service import MoodLogService
+
 
 @dataclass(frozen=True)
 class Container:
@@ -40,10 +42,10 @@ class Container:
     activity_category_service: ActivityCategoryService
     activity_usage_service: ActivityUsageService
 
+
 async def build_container(db_settings: DbSettings) -> Container:
     engine = await build_engine(
-        database_url=db_settings.db_url,
-        is_database_echo=db_settings.is_sql_echo
+        database_url=db_settings.db_url, is_database_echo=db_settings.is_sql_echo
     )
 
     if db_settings.auto_init_db:
@@ -68,7 +70,6 @@ async def build_container(db_settings: DbSettings) -> Container:
     return Container(
         db_settings=db_settings,
         engine=engine,
-
         mood_log_repo=mood_log_repo,
         common_mood_log_repo=common_mood_log_repo,
         idea_repo=idea_repo,
@@ -76,7 +77,6 @@ async def build_container(db_settings: DbSettings) -> Container:
         category_repo=category_repo,
         activity_category_repo=activity_category_repo,
         activity_usage_repo=activity_usage_repo,
-
         mood_log_service=mood_log_service,
         common_mood_log_service=common_mood_log_service,
         idea_service=idea_service,

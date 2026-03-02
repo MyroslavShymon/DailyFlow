@@ -1,25 +1,25 @@
 import asyncio
 from datetime import datetime
 from pathlib import Path
-from typing import Union, Any, Optional
+from typing import Any
 
-from daily_flow.db.repositories.ingest_run_repo import IngestRunRepo, IngestRun
+from daily_flow.db.repositories.ingest_run_repo import IngestRun, IngestRunRepo
 from daily_flow.db.schema.audit import IngestSourceType, IngestStatusType
 from daily_flow.utils.hash import calculate_file_hash
 
-
 # def ingest_skip_check():І
 
+
 async def ingest_run(
-        ingest_run_repo: IngestRunRepo,
-        dataset: str,
-        source_type: IngestSourceType,
-        file_path: Union[str, Path],
-        start_time: datetime,
-        error_message: Optional[str] = None,
-        end_time: Optional[datetime] = None,
-        metrics: Optional[dict[str, Any]] = None
-) -> Union[IngestRun, bool]:
+    ingest_run_repo: IngestRunRepo,
+    dataset: str,
+    source_type: IngestSourceType,
+    file_path: str | Path,
+    start_time: datetime,
+    error_message: str | None = None,
+    end_time: datetime | None = None,
+    metrics: dict[str, Any] | None = None,
+) -> IngestRun | bool:
     path = Path(file_path)
     if not path.is_file():
         raise FileNotFoundError(f"Can't ingest a non-existent file: {file_path}")
@@ -43,10 +43,9 @@ async def ingest_run(
             status=IngestStatusType.FAILED,
             error_message=error_message,
             metrics=metrics,
-            finished_at=end_time
+            finished_at=end_time,
         )
         return await ingest_run_repo.add_ingest(ingest_run_result)
-
 
     is_already_ingest = await ingest_run_repo.is_already_processed(file_hash)
     if not is_already_ingest and end_time is None:
@@ -62,10 +61,7 @@ async def ingest_run(
         )
     else:
         ingest_run_result = IngestRun(
-            **base_params,
-            status=IngestStatusType.SUCCESS,
-            metrics=metrics,
-            finished_at=end_time
+            **base_params, status=IngestStatusType.SUCCESS, metrics=metrics, finished_at=end_time
         )
 
     return await ingest_run_repo.add_ingest(ingest_run_result)

@@ -1,13 +1,14 @@
 import logging
+from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Optional, Any, Mapping
+from typing import Any
 
-from sqlalchemy.ext.asyncio import AsyncEngine
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy import CursorResult, delete, select, update
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
-from sqlalchemy import select, delete, update, CursorResult
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncEngine
 
-from daily_flow.db.errors import map_integrity_error, MissingRequiredFieldError, UnknownFieldError
+from daily_flow.db.errors import MissingRequiredFieldError, UnknownFieldError, map_integrity_error
 from daily_flow.db.schema import activity, category_activity
 
 logger = logging.getLogger(__name__)
@@ -38,28 +39,28 @@ ALLOWED_ACTIVITY_FIELDS = {
 class Activity:
     id: int
     title: str
-    description: Optional[str]
+    description: str | None
 
-    social_type: Optional[str]
-    people_count_min: Optional[int]
-    people_count_max: Optional[int]
-    specific_with: Optional[str]
+    social_type: str | None
+    people_count_min: int | None
+    people_count_max: int | None
+    specific_with: str | None
 
-    time_context: Optional[str]
-    duration_min_minutes: Optional[int]
-    duration_max_minutes: Optional[int]
-    time_of_day: Optional[str]
+    time_context: str | None
+    duration_min_minutes: int | None
+    duration_max_minutes: int | None
+    time_of_day: str | None
 
-    energy_required_min: Optional[int]
-    energy_required_max: Optional[int]
-    energy_gain: Optional[int]
-    mood_min: Optional[int]
-    mood_max: Optional[int]
+    energy_required_min: int | None
+    energy_required_max: int | None
+    energy_gain: int | None
+    mood_min: int | None
+    mood_max: int | None
 
-    cost_level: Optional[str]
+    cost_level: str | None
     requires_preparation: bool
-    preparation_notes: Optional[str]
-    location_type: Optional[str]
+    preparation_notes: str | None
+    location_type: str | None
 
 
 class ActivityRepo:
@@ -72,23 +73,19 @@ class ActivityRepo:
             id=row_mapping["id"],
             title=row_mapping["title"],
             description=row_mapping["description"],
-
             social_type=row_mapping["social_type"],
             people_count_min=row_mapping["people_count_min"],
             people_count_max=row_mapping["people_count_max"],
             specific_with=row_mapping["specific_with"],
-
             time_context=row_mapping["time_context"],
             duration_min_minutes=row_mapping["duration_min_minutes"],
             duration_max_minutes=row_mapping["duration_max_minutes"],
             time_of_day=row_mapping["time_of_day"],
-
             energy_required_min=row_mapping["energy_required_min"],
             energy_required_max=row_mapping["energy_required_max"],
             energy_gain=row_mapping["energy_gain"],
             mood_min=row_mapping["mood_min"],
             mood_max=row_mapping["mood_max"],
-
             cost_level=row_mapping["cost_level"],
             requires_preparation=bool(row_mapping["requires_preparation"]),
             preparation_notes=row_mapping["preparation_notes"],
@@ -113,11 +110,11 @@ class ActivityRepo:
 
         try:
             async with self._engine.begin() as conn:
-                activity_id: int | None = (await conn.execute(
-                    select(activity.c.id)
-                    .where(activity.c.title == title)
-                    .limit(1)
-                )).scalar()
+                activity_id: int | None = (
+                    await conn.execute(
+                        select(activity.c.id).where(activity.c.title == title).limit(1)
+                    )
+                ).scalar()
 
                 if activity_id is None:
                     stmt = (

@@ -1,6 +1,6 @@
 import logging
 
-from aiogram import types, F
+from aiogram import F, types
 from aiogram.fsm.context import FSMContext
 
 from daily_flow.app.container import Container
@@ -17,21 +17,24 @@ KEY_IDEA_ID = "idea_id_for_delete"
 
 
 @router.message(F.text == IdeaMenu.BTN_DELETE_SPHERE_FROM_IDEA)
-async def delete_sphere_from_idea(message: types.Message, state: FSMContext, db_container: Container):
+async def delete_sphere_from_idea(
+    message: types.Message, state: FSMContext, db_container: Container
+):
     await state.set_state(SphereToIdeaDeleteForm.waiting_for_idea_id)
 
     ideas_text = await get_all_ideas_text(db_container)
 
     await message.answer(
-        "Введи **ID ідеї**, з якої треба прибрати сферу:\n\n"
-        f"{ideas_text}",
+        f"Введи **ID ідеї**, з якої треба прибрати сферу:\n\n{ideas_text}",
         reply_markup=IdeaMenu.get(),
         parse_mode="Markdown",
     )
 
 
 @router.message(SphereToIdeaDeleteForm.waiting_for_idea_id)
-async def delete_sphere_from_idea_step1(message: types.Message, state: FSMContext, db_container: Container):
+async def delete_sphere_from_idea_step1(
+    message: types.Message, state: FSMContext, db_container: Container
+):
     raw = (message.text or "").strip()
 
     try:
@@ -45,15 +48,16 @@ async def delete_sphere_from_idea_step1(message: types.Message, state: FSMContex
     spheres_text = await get_all_spheres_text(db_container)
 
     await message.answer(
-        "Тепер введи **ID сфери**, яку треба прибрати з цієї ідеї:\n\n"
-        f"{spheres_text}",
+        f"Тепер введи **ID сфери**, яку треба прибрати з цієї ідеї:\n\n{spheres_text}",
         reply_markup=IdeaMenu.get(),
         parse_mode="Markdown",
     )
 
 
 @router.message(SphereToIdeaDeleteForm.waiting_for_sphere_id)
-async def delete_sphere_from_idea_step2(message: types.Message, state: FSMContext, db_container: Container):
+async def delete_sphere_from_idea_step2(
+    message: types.Message, state: FSMContext, db_container: Container
+):
     data = await state.get_data()
     idea_id = data.get(KEY_IDEA_ID)
 
@@ -74,11 +78,12 @@ async def delete_sphere_from_idea_step2(message: types.Message, state: FSMContex
             await message.answer("✅ Сферу прибрано з ідеї!", reply_markup=IdeaMenu.get())
         else:
             await message.answer(
-                "🔍 Нічого не видалено (звʼязок не знайдено).",
-                reply_markup=IdeaMenu.get()
+                "🔍 Нічого не видалено (звʼязок не знайдено).", reply_markup=IdeaMenu.get()
             )
 
     except Exception as e:
         logger.exception("Idea delete_sphere_from_idea failed: %s", e)
         await state.clear()
-        await message.answer("❌ Сталася помилка під час видалення звʼязку.", reply_markup=IdeaMenu.get())
+        await message.answer(
+            "❌ Сталася помилка під час видалення звʼязку.", reply_markup=IdeaMenu.get()
+        )

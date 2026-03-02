@@ -11,7 +11,6 @@ class CommonMoodMenu:
     BTN_GET_TAGS_BY_DAY = "📅 Події за день"
     BTN_DELETE_TAG_BY_DAY = "🗑️ Видалити теги дня"
 
-
     @classmethod
     def get(cls):
         builder = ReplyKeyboardBuilder()

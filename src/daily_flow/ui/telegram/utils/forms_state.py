@@ -1,31 +1,36 @@
-from typing import TypedDict, Any
+from typing import Any, TypedDict
 
-from aiogram import types, Bot
-from aiogram.fsm.context import FSMContext
+from aiogram import Bot, types
 from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
+from aiogram.fsm.context import FSMContext
 
 from daily_flow.ui.telegram.utils.form_render import get_form_keyboard
 
 FORMS_KEY = "forms"
 
+
 class TGLastMsg(TypedDict):
     chat_id: int | None
     message_id: int | None
+
 
 class TGForm(TypedDict):
     values: dict[str, Any | None]
     current_field: str | None
     last_msg: TGLastMsg
 
+
 DEFAULT_FORM: TGForm = {
-  "values": {},
-  "current_field": None,
-  "last_msg": {"chat_id": None, "message_id": None},
+    "values": {},
+    "current_field": None,
+    "last_msg": {"chat_id": None, "message_id": None},
 }
+
 
 async def form_get(state: FSMContext, form_name: str) -> TGForm:
     data = await state.get_data()
     return data.get(FORMS_KEY, {}).get(form_name, DEFAULT_FORM)
+
 
 async def form_patch(state: FSMContext, form_name: str, patch: dict) -> None:
     data = await state.get_data()
@@ -34,6 +39,7 @@ async def form_patch(state: FSMContext, form_name: str, patch: dict) -> None:
     form.update(patch)
     forms[form_name] = form
     await state.update_data({FORMS_KEY: forms})
+
 
 async def form_set_value(state: FSMContext, form_name: str, key: str, value) -> None:
     data = await state.get_data()
@@ -45,11 +51,18 @@ async def form_set_value(state: FSMContext, form_name: str, key: str, value) -> 
     forms[form_name] = form
     await state.update_data({FORMS_KEY: forms})
 
-async def form_set_last_msg(state: FSMContext, form_name: str, chat_id: int, message_id: int) -> None:
+
+async def form_set_last_msg(
+    state: FSMContext, form_name: str, chat_id: int, message_id: int
+) -> None:
     await form_patch(state, form_name, {"last_msg": {"chat_id": chat_id, "message_id": message_id}})
 
-async def form_set_current_field(state: FSMContext, form_name: str, current_filed: str | None) -> None:
+
+async def form_set_current_field(
+    state: FSMContext, form_name: str, current_filed: str | None
+) -> None:
     await form_patch(state, form_name, {"current_field": current_filed})
+
 
 async def form_reset(state, form_name: str):
     data = await state.get_data()
@@ -57,12 +70,9 @@ async def form_reset(state, form_name: str):
     forms.pop(form_name, None)
     await state.update_data({FORMS_KEY: forms})
 
+
 async def refresh_form_message(
-        state: FSMContext,
-        bot: Bot,
-        text: str,
-        form_name: str,
-        mapping: dict[str, str]
+    state: FSMContext, bot: Bot, text: str, form_name: str, mapping: dict[str, str]
 ) -> None:
     form: TGForm = await form_get(state, form_name)
 
@@ -77,7 +87,7 @@ async def refresh_form_message(
             chat_id=chat_id,
             message_id=message_id,
             reply_markup=get_form_keyboard(mapping, form_name),
-            parse_mode="Markdown"
+            parse_mode="Markdown",
         )
     except TelegramBadRequest as e:
         if "message is not modified" in str(e):
@@ -86,11 +96,8 @@ async def refresh_form_message(
     except TelegramForbiddenError:
         return
 
-async def finish_text_input(
-        state: FSMContext,
-        message: types.Message,
-        form_name: str
-):
+
+async def finish_text_input(state: FSMContext, message: types.Message, form_name: str):
     await message.delete()
     await form_set_current_field(state, form_name, None)
     await state.set_state(None)

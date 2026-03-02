@@ -1,6 +1,6 @@
 import logging
 
-from aiogram import types, F
+from aiogram import F, types
 
 from daily_flow.app.container import Container
 from daily_flow.ui.telegram.keyboards.activity import ActivityMenu
@@ -8,8 +8,8 @@ from daily_flow.ui.telegram.render.activity import render_category_compact
 from daily_flow.ui.telegram.runtime import router
 from daily_flow.ui.telegram.utils.truncate_text import truncate_text
 
-
 logger = logging.getLogger(__name__)
+
 
 async def get_all_categories_text(db_container: Container) -> str:
     categories = await db_container.category_service.get_all_categories()
@@ -29,4 +29,7 @@ async def get_all_categories(message: types.Message, db_container: Container):
         await message.answer(text, reply_markup=ActivityMenu.get(), parse_mode="Markdown")
     except Exception as e:
         logger.exception("Category get_all_categories failed: %s", e)
-        await message.answer("❌ Сталася помилка під час отримання списку категорій.", reply_markup=ActivityMenu.get())
+        await message.answer(
+            "❌ Сталася помилка під час отримання списку категорій.",
+            reply_markup=ActivityMenu.get(),
+        )

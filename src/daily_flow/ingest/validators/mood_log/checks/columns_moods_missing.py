@@ -1,5 +1,3 @@
-from typing import Optional
-
 import pandas as pd
 
 from daily_flow.ingest.schemas.mood_log import MoodLogIngestContract
@@ -9,9 +7,8 @@ from daily_flow.ingest.validators.mood_log.definitions import MoodLogValidationE
 
 
 def check_columns_moods_missing(
-        df: pd.DataFrame,
-        contract: MoodLogIngestContract
-) -> Optional[CheckResult]:
+    df: pd.DataFrame, contract: MoodLogIngestContract
+) -> CheckResult | None:
     mood_columns = list(contract.mood_columns)
     mood_cols_na_mask = df[mood_columns].isna().all(axis=1)
 
@@ -22,9 +19,6 @@ def check_columns_moods_missing(
             message="All of mood columns haven't any value",
             count=int(mood_cols_na_mask.sum()),
             example_index=df.index[mood_cols_na_mask][:5].tolist(),
-            columns=mood_columns
+            columns=mood_columns,
         )
-        return {
-            "issue": issue,
-            "mask": mood_cols_na_mask
-        }
+        return {"issue": issue, "mask": mood_cols_na_mask}

@@ -1,21 +1,22 @@
 import logging
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Optional, Any, Mapping
+from typing import Any
 
-from sqlalchemy.ext.asyncio import AsyncEngine
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy import CursorResult, and_, delete, exists, select
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
-from sqlalchemy import select, delete, exists, and_, CursorResult
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncEngine
 
 from daily_flow.db.errors import (
-    map_integrity_error,
-    MissingRequiredFieldError,
-    UnknownFieldError,
     InvalidScoreError,
+    MissingRequiredFieldError,
     ParentNotFoundError,
+    UnknownFieldError,
+    map_integrity_error,
 )
-from daily_flow.db.schema import activity_usage, activity
+from daily_flow.db.schema import activity, activity_usage
 
 logger = logging.getLogger(__name__)
 
@@ -37,16 +38,16 @@ class ActivityUsage:
     activity_id: int
     used_at: datetime
 
-    duration_actual_minutes: Optional[int]
+    duration_actual_minutes: int | None
 
-    rating_before: Optional[int]
-    rating_after: Optional[int]
-    mood_before: Optional[int]
-    mood_after: Optional[int]
-    energy_before: Optional[int]
-    energy_after: Optional[int]
+    rating_before: int | None
+    rating_after: int | None
+    mood_before: int | None
+    mood_after: int | None
+    energy_before: int | None
+    energy_after: int | None
 
-    notes: Optional[str]
+    notes: str | None
 
 
 class ActivityUsageRepo:
@@ -101,9 +102,7 @@ class ActivityUsageRepo:
 
     @staticmethod
     async def _assert_activity_exists(conn, activity_id: int) -> None:
-        ok = (await conn.execute(
-            select(exists().where(activity.c.id == activity_id))
-        )).scalar()
+        ok = (await conn.execute(select(exists().where(activity.c.id == activity_id)))).scalar()
         if not ok:
             raise ParentNotFoundError("There is no activity entity with such id")
 
@@ -122,7 +121,9 @@ class ActivityUsageRepo:
         payload = payload or {}
         self._usage_payload_validator(payload)
 
-        self._validate_non_negative_int(payload.get("duration_actual_minutes"), "duration_actual_minutes")
+        self._validate_non_negative_int(
+            payload.get("duration_actual_minutes"), "duration_actual_minutes"
+        )
 
         self._validate_scale_1_5(payload.get("rating_before"), "rating_before")
         self._validate_scale_1_5(payload.get("rating_after"), "rating_after")
@@ -155,14 +156,10 @@ class ActivityUsageRepo:
                 set_fields = dict(base_values)
                 set_fields.update({k: v for k, v in payload.items() if v is not None})
 
-                stmt = (
-                    insert_stmt
-                    .on_conflict_do_update(
-                        index_elements=[activity_usage.c.id],
-                        set_=set_fields,
-                    )
-                    .returning(*activity_usage.c)
-                )
+                stmt = insert_stmt.on_conflict_do_update(
+                    index_elements=[activity_usage.c.id],
+                    set_=set_fields,
+                ).returning(*activity_usage.c)
 
                 res2 = await conn.execute(stmt)
                 row2 = res2.mappings().one()
@@ -219,7 +216,9 @@ class ActivityUsageRepo:
             rows = res.mappings().all()
             return [self._to_activity_usage(row) for row in rows]
 
-    async def get_activity_usages_by_period(self, date_from: datetime, date_to: datetime) -> list[ActivityUsage]:
+    async def get_activity_usages_by_period(
+        self, date_from: datetime, date_to: datetime
+    ) -> list[ActivityUsage]:
         if not date_from or not date_to:
             raise MissingRequiredFieldError("date_from and date_to are required")
 

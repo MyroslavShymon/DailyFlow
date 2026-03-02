@@ -1,14 +1,29 @@
 import logging
 from datetime import date
+
 from sqlalchemy.exc import SQLAlchemyError
 
-from daily_flow.db.errors import DuplicateDayError, DuplicateError, MissingRequiredFieldError, InvalidScoreError, \
-    UnknownFieldError, EmptyUpsertPayloadError, DBIntegrityError, RepoError, ParentNotFoundError
-from daily_flow.db.repositories.common_mood_repo import CommonMoodLogRepo, CommonMoodLog, MoodTagImpact
+from daily_flow.db.errors import (
+    DBIntegrityError,
+    DuplicateDayError,
+    DuplicateError,
+    EmptyUpsertPayloadError,
+    InvalidScoreError,
+    MissingRequiredFieldError,
+    ParentNotFoundError,
+    RepoError,
+    UnknownFieldError,
+)
+from daily_flow.db.repositories.common_mood_repo import (
+    CommonMoodLog,
+    CommonMoodLogRepo,
+    MoodTagImpact,
+)
 from daily_flow.services.common_mood.dto import UpsertCommonMoodLogDTO, UpsertTagImpactDTO
-from daily_flow.services.errors import UserInputError, ConflictError, TemporaryError
+from daily_flow.services.errors import ConflictError, TemporaryError, UserInputError
 
 logger = logging.getLogger(__name__)
+
 
 class CommonMoodLogService:
     def __init__(self, repo: CommonMoodLogRepo) -> None:
@@ -25,15 +40,18 @@ class CommonMoodLogService:
 
         try:
             common_mood_log = await self._repo.upsert_common_mood_log_by_day(
-                day=day,
-                payload=values
+                day=day, payload=values
             )
             return common_mood_log
         except (DuplicateDayError, DuplicateError) as e:
             raise ConflictError(str(e)) from e
-        except (MissingRequiredFieldError, InvalidScoreError, UnknownFieldError, EmptyUpsertPayloadError) as e:
+        except (
+            MissingRequiredFieldError,
+            InvalidScoreError,
+            UnknownFieldError,
+            EmptyUpsertPayloadError,
+        ) as e:
             raise UserInputError(str(e)) from e
-        # except ForeignKeyViolationError(поки не ясно як використовувати і чи треба саме для цієї схеми)
         except (DBIntegrityError, RepoError) as e:
             logger.exception(
                 "CommonMoodService.upsert_common_mood_log failed (day=%s)",
@@ -64,7 +82,13 @@ class CommonMoodLogService:
             return tag_impact
         except DuplicateError as e:
             raise ConflictError(str(e)) from e
-        except (InvalidScoreError, UnknownFieldError, EmptyUpsertPayloadError, ParentNotFoundError, MissingRequiredFieldError) as e:
+        except (
+            InvalidScoreError,
+            UnknownFieldError,
+            EmptyUpsertPayloadError,
+            ParentNotFoundError,
+            MissingRequiredFieldError,
+        ) as e:
             raise UserInputError(str(e)) from e
         except (DBIntegrityError, RepoError) as e:
             logger.exception(

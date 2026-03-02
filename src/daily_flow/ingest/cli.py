@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Union
 
 from sqlalchemy.ext.asyncio import AsyncEngine
 
@@ -14,7 +13,7 @@ from daily_flow.ingest.runner.common_mood_log import common_mood_log_runner
 from daily_flow.ingest.runner.mood_log import mood_log_runner
 from daily_flow.ingest.schemas.base import BaseIngestContract
 from daily_flow.ingest.schemas.common_mood_log import CommonMoodLogIngestContract
-from daily_flow.ingest.schemas.mood_log import MoodLogIngestContract 
+from daily_flow.ingest.schemas.mood_log import MoodLogIngestContract
 
 
 @dataclass(frozen=True)
@@ -24,14 +23,12 @@ class IngestCLI:
 
     ingest_run_repo: IngestRunRepo
 
+
 async def build_ingest_cli(
-        file_path: Union[str, Path],
-        contract: BaseIngestContract,
-        db_settings: DbSettings
+    file_path: str | Path, contract: BaseIngestContract, db_settings: DbSettings
 ) -> IngestCLI:
     engine = await build_engine(
-        database_url=db_settings.db_url,
-        is_database_echo=db_settings.is_sql_echo
+        database_url=db_settings.db_url, is_database_echo=db_settings.is_sql_echo
     )
 
     if db_settings.auto_init_db:
@@ -46,7 +43,7 @@ async def build_ingest_cli(
             file_path=file_path,
             contract=contract,
             ingest_run_repo=ingest_run_repo,
-            mood_log_repo=mood_log_repo
+            mood_log_repo=mood_log_repo,
         )
 
     if isinstance(contract, CommonMoodLogIngestContract):
@@ -56,7 +53,7 @@ async def build_ingest_cli(
             file_path=file_path,
             contract=contract,
             ingest_run_repo=ingest_run_repo,
-            common_mood_log_repo=common_mood_log_repo
+            common_mood_log_repo=common_mood_log_repo,
         )
 
     return IngestCLI(
@@ -64,4 +61,3 @@ async def build_ingest_cli(
         engine=engine,
         ingest_run_repo=ingest_run_repo,
     )
-

@@ -2,15 +2,15 @@ from typing import get_args
 
 import pandas as pd
 
-from daily_flow.ingest.cleaning.common import CleanResult, Mode, BadAction
+from daily_flow.ingest.cleaning.common import BadAction, CleanResult, Mode
 from daily_flow.ingest.validators.common import ValidationResult
 
 
 def apply_validation_policy(
-        df: pd.DataFrame,
-        validation_report: ValidationResult,
-        mode: Mode = "facts",
-        bad_action: BadAction = "quarantine"
+    df: pd.DataFrame,
+    validation_report: ValidationResult,
+    mode: Mode = "facts",
+    bad_action: BadAction = "quarantine",
 ) -> CleanResult:
     allowed_modes, allowed_bad_actions = get_args(Mode), get_args(BadAction)
     if mode not in allowed_modes:
@@ -38,7 +38,9 @@ def apply_validation_policy(
         df_quarantine = None
 
     if mode == "train":
-        df_clean = df_clean.loc[~validation_report.warnings_row_mask.reindex(df_clean.index, fill_value=False)].copy()
+        df_clean = df_clean.loc[
+            ~validation_report.warnings_row_mask.reindex(df_clean.index, fill_value=False)
+        ].copy()
 
     actions = {
         "mode": mode,
@@ -50,8 +52,4 @@ def apply_validation_policy(
         "rows_quarantine": int(len(df_quarantine)) if df_quarantine is not None else 0,
     }
 
-    return CleanResult(
-        df_clean=df_clean,
-        df_quarantine=df_quarantine,
-        actions=actions
-    )
+    return CleanResult(df_clean=df_clean, df_quarantine=df_quarantine, actions=actions)

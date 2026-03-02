@@ -1,6 +1,5 @@
 from datetime import datetime
 from pathlib import Path
-from typing import Union
 
 from daily_flow.db.repositories.common_mood_repo import CommonMoodLogRepo
 from daily_flow.db.repositories.ingest_run_repo import IngestRunRepo
@@ -15,10 +14,10 @@ from daily_flow.ingest.validators.common_mood_log.validator import validate_comm
 
 
 async def common_mood_log_runner(
-        file_path: Union[str, Path],
-        contract: CommonMoodLogIngestContract,
-        ingest_run_repo: IngestRunRepo,
-        common_mood_log_repo: CommonMoodLogRepo
+    file_path: str | Path,
+    contract: CommonMoodLogIngestContract,
+    ingest_run_repo: IngestRunRepo,
+    common_mood_log_repo: CommonMoodLogRepo,
 ):
     base_ingest_params = {
         "dataset": contract.dataset,
@@ -38,26 +37,23 @@ async def common_mood_log_runner(
         read_result = read_common_mood_log_csv(file_path)
         transformed_result = transform_common_mood_log(read_result, contract)
 
-        validation_result= validate_common_mood_log(transformed_result, contract)
+        validation_result = validate_common_mood_log(transformed_result, contract)
         result_metrics = validation_result.metrics
 
         clean_result = apply_validation_policy(
             df=transformed_result,
             validation_report=validation_result,
             mode="train",
-            bad_action="quarantine"
+            bad_action="quarantine",
         )
 
         batch_upsert_result = await load_common_mood_log(
-            df=clean_result.df_clean,
-            common_mood_log_repo=common_mood_log_repo
+            df=clean_result.df_clean, common_mood_log_repo=common_mood_log_repo
         )
 
         if batch_upsert_result:
             ingest_run_result = await ingest_run(
-                **base_ingest_params,
-                end_time=datetime.now(),
-                metrics=result_metrics
+                **base_ingest_params, end_time=datetime.now(), metrics=result_metrics
             )
             return ingest_run_result.status
     except Exception as e:
@@ -65,12 +61,6 @@ async def common_mood_log_runner(
         msg = str(getattr(e, "orig", e)).lower()
 
         ingest_run_result = await ingest_run(
-            **base_ingest_params,
-            end_time=end_time,
-            error_message=msg,
-            metrics=result_metrics
+            **base_ingest_params, end_time=end_time, error_message=msg, metrics=result_metrics
         )
         return ingest_run_result.status
-
-
-

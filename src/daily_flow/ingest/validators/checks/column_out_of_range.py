@@ -1,9 +1,7 @@
-from typing import Optional
-
 import pandas as pd
 
 from daily_flow.ingest.validators.checks.common import CheckResult
-from daily_flow.ingest.validators.common import ValidationIssue, ERR
+from daily_flow.ingest.validators.common import ERR, ValidationIssue
 
 
 def check_column_out_of_range(
@@ -12,8 +10,8 @@ def check_column_out_of_range(
     error_code: ERR,
     min_val: int,
     max_val: int,
-    message: Optional[str] = None
-) -> Optional[CheckResult]:
+    message: str | None = None,
+) -> CheckResult | None:
     raw_has_any_val = df[columns].notna().any(axis=1)
 
     in_range_or_na = (df[columns].ge(min_val) & df[columns].le(max_val)) | df[columns].isna()
@@ -23,13 +21,11 @@ def check_column_out_of_range(
         issue = ValidationIssue(
             code=error_code,
             severity="error",
-            message=message or f"Columns: {', '.join(columns)} are out of range {min_val} - {max_val}",
+            message=message
+            or f"Columns: {', '.join(columns)} are out of range {min_val} - {max_val}",
             count=int(column_range_bad.sum()),
             example_index=df.index[column_range_bad][:5].tolist(),
-            columns=columns
+            columns=columns,
         )
 
-        return  {
-            "issue": issue,
-            "mask": column_range_bad
-        }
+        return {"issue": issue, "mask": column_range_bad}

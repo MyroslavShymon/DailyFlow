@@ -1,4 +1,5 @@
-import argparse, sys
+import argparse
+import sys
 from pathlib import Path
 
 from scripts.backup.apply_retention import apply_retention
@@ -27,6 +28,7 @@ def main() -> None:
 
     print(f"Backup OK: {Path(args.out) / result.file_name}")
     sys.exit(0)
+
 
 if __name__ == "__main__":
     main()

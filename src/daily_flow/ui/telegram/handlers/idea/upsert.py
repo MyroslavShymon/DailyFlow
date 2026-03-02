@@ -1,6 +1,6 @@
 import logging
 
-from aiogram import types, F, Bot
+from aiogram import Bot, F, types
 from aiogram.fsm.context import FSMContext
 
 from daily_flow.ui.telegram.constants.idea import idea_mapping
@@ -11,15 +11,14 @@ from daily_flow.ui.telegram.utils.errors import handle_message_error
 from daily_flow.ui.telegram.utils.form_render import get_form_keyboard
 from daily_flow.ui.telegram.utils.forms_state import (
     TGForm,
+    finish_text_input,
     form_get,
+    form_set_current_field,
     form_set_last_msg,
     form_set_value,
-    form_set_current_field,
     refresh_form_message,
-    finish_text_input,
 )
 from daily_flow.ui.telegram.utils.keyboard import build_inline_keyboard
-
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +33,7 @@ INTENT_VALUES = [
     "todo",
 ]
 
+
 def _format_intent(value: str | None) -> str:
     if not value:
         return "—"
@@ -46,6 +46,7 @@ def _format_intent(value: str | None) -> str:
         "todo": "📝 todo",
     }
     return pretty.get(value, value)
+
 
 @router.callback_query(F.data.startswith(f"edit_{IDEA_FORM}:"))
 async def edit_any_idea_field(callback: types.CallbackQuery, state: FSMContext):
@@ -78,10 +79,9 @@ async def edit_any_idea_field(callback: types.CallbackQuery, state: FSMContext):
         )
         return
 
-    await callback.message.edit_text(
-        f"Введіть нові дані про {idea_mapping.get(field_name)}:"
-    )
+    await callback.message.edit_text(f"Введіть нові дані про {idea_mapping.get(field_name)}:")
     await state.set_state(IdeaForm.waiting_input)
+
 
 @router.callback_query(F.data.startswith("set_idea_intent_value:"))
 async def process_intent_selection(callback: types.CallbackQuery, state: FSMContext, bot: Bot):
@@ -104,6 +104,7 @@ async def process_intent_selection(callback: types.CallbackQuery, state: FSMCont
 
     await callback.answer("✅ Тип ідеї збережено!")
 
+
 @router.message(IdeaForm.waiting_input)
 async def process_idea_input(message: types.Message, state: FSMContext, bot: Bot):
     form: TGForm = await form_get(state, IDEA_FORM)
@@ -124,7 +125,9 @@ async def process_idea_input(message: types.Message, state: FSMContext, bot: Bot
 
     elif field_name == "description":
         if not value:
-            await handle_message_error(message, "❌ Опис не може бути порожнім рядком (або не заповнюй його).")
+            await handle_message_error(
+                message, "❌ Опис не може бути порожнім рядком (або не заповнюй його)."
+            )
             return
         await form_set_value(state, IDEA_FORM, "description", value)
 
@@ -144,6 +147,7 @@ async def process_idea_input(message: types.Message, state: FSMContext, bot: Bot
 
     await finish_text_input(state, message, IDEA_FORM)
 
+
 async def render_upsert_idea(state: FSMContext) -> str:
     form: TGForm = await form_get(state, IDEA_FORM)
 
@@ -155,12 +159,10 @@ async def render_upsert_idea(state: FSMContext) -> str:
     }
 
     text = "💡 **Ідея**\n\n"
-    text += "\n".join(
-        f"{idea_mapping.get(k).capitalize()}: {v}"
-        for k, v in idea_data.items()
-    )
+    text += "\n".join(f"{idea_mapping.get(k).capitalize()}: {v}" for k, v in idea_data.items())
 
     return text
+
 
 @router.message(F.text == IdeaMenu.BTN_ADD_EDIT_IDEA)
 async def show_idea_upsert_form(message: types.Message, state: FSMContext):

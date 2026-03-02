@@ -1,19 +1,21 @@
 import logging
+
 from sqlalchemy.exc import SQLAlchemyError
 
 from daily_flow.db.errors import (
-    DuplicateError,
-    MissingRequiredFieldError,
-    UnknownFieldError,
-    InvalidScoreError,
     DBIntegrityError,
+    DuplicateError,
+    InvalidScoreError,
+    MissingRequiredFieldError,
     RepoError,
+    UnknownFieldError,
 )
-from daily_flow.db.repositories.activity.activity_repo import ActivityRepo, Activity
+from daily_flow.db.repositories.activity.activity_repo import Activity, ActivityRepo
 from daily_flow.services.activity.activity.dto import UpsertActivityDTO
-from daily_flow.services.errors import ConflictError, UserInputError, TemporaryError
+from daily_flow.services.errors import ConflictError, TemporaryError, UserInputError
 
 logger = logging.getLogger(__name__)
+
 
 class ActivityService:
     def __init__(self, repo: ActivityRepo) -> None:

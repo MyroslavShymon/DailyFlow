@@ -1,5 +1,3 @@
-from typing import Optional
-
 import pandas as pd
 
 from daily_flow.ingest.schemas.common_mood_log import CommonMoodLogIngestContract
@@ -9,9 +7,9 @@ from daily_flow.ingest.validators.common_mood_log.definitions import CommonMoodL
 
 
 def check_column_has_no_optional_fields(
-        df: pd.DataFrame,
-        contract: CommonMoodLogIngestContract,
-) -> Optional[CheckResult]:
+    df: pd.DataFrame,
+    contract: CommonMoodLogIngestContract,
+) -> CheckResult | None:
     optional_columns = list(contract.optional_columns)
     has_no_optional_fields = df[optional_columns].isna().all(axis=1)
     if has_no_optional_fields.any():
@@ -21,9 +19,9 @@ def check_column_has_no_optional_fields(
             message="There are no optional fields in raw",
             count=has_no_optional_fields.sum(),
             example_index=df.index[has_no_optional_fields][:5].tolist(),
-            columns=optional_columns
+            columns=optional_columns,
         )
         return {
             "issue": issue,
-            "mask": pd.Series(has_no_optional_fields).reindex(df.index, fill_value=False)
+            "mask": pd.Series(has_no_optional_fields).reindex(df.index, fill_value=False),
         }

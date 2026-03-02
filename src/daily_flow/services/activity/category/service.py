@@ -1,12 +1,19 @@
 import logging
+
 from sqlalchemy.exc import SQLAlchemyError
 
-from daily_flow.db.errors import DuplicateError, MissingRequiredFieldError, DBIntegrityError, RepoError
-from daily_flow.db.repositories.activity.category_repo import CategoryRepo, Category
+from daily_flow.db.errors import (
+    DBIntegrityError,
+    DuplicateError,
+    MissingRequiredFieldError,
+    RepoError,
+)
+from daily_flow.db.repositories.activity.category_repo import Category, CategoryRepo
 from daily_flow.services.activity.category.dto import UpsertCategoryDTO
-from daily_flow.services.errors import ConflictError, UserInputError, TemporaryError
+from daily_flow.services.errors import ConflictError, TemporaryError, UserInputError
 
 logger = logging.getLogger(__name__)
+
 
 class CategoryService:
     def __init__(self, repo: CategoryRepo) -> None:

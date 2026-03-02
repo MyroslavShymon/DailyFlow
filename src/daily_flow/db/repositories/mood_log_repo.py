@@ -1,56 +1,72 @@
 import logging
+from collections.abc import Mapping
 from dataclasses import dataclass
-from datetime import datetime, date
-from typing import Optional, Any, Mapping, TypedDict
+from datetime import date, datetime
+from typing import Any, TypedDict
 
-from sqlalchemy.ext.asyncio import AsyncEngine
-from sqlalchemy import select, delete, func, CursorResult
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy import CursorResult, delete, func, select
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncEngine
 
-from daily_flow.db.errors import map_integrity_error, EmptyUpsertPayloadError, UnknownFieldError
+from daily_flow.db.errors import EmptyUpsertPayloadError, UnknownFieldError, map_integrity_error
 from daily_flow.db.schema import mood_log
 
-ALLOWED_SCORE_FIELDS =  {"joy", "interest", "calm", "energy", "anxiety", "sadness", "irritation", "fatigue", "fear",
-                     "confidence", "sleep"}
+ALLOWED_SCORE_FIELDS = {
+    "joy",
+    "interest",
+    "calm",
+    "energy",
+    "anxiety",
+    "sadness",
+    "irritation",
+    "fatigue",
+    "fear",
+    "confidence",
+    "sleep",
+}
 
-NON_UPDATABLE = {'day', 'id', 'created_at'}
+NON_UPDATABLE = {"day", "id", "created_at"}
 
 logger = logging.getLogger(__name__)
+
 
 @dataclass(frozen=True)
 class MoodLog:
     id: int
     day: date
-    joy: Optional[int]
-    interest: Optional[int]
-    calm: Optional[int]
-    energy: Optional[int]
-    anxiety: Optional[int]
-    sadness: Optional[int]
-    irritation: Optional[int]
-    fatigue: Optional[int]
-    fear: Optional[int]
-    confidence: Optional[int]
-    sleep: Optional[int]
+    joy: int | None
+    interest: int | None
+    calm: int | None
+    energy: int | None
+    anxiety: int | None
+    sadness: int | None
+    irritation: int | None
+    fatigue: int | None
+    fear: int | None
+    confidence: int | None
+    sleep: int | None
     created_at: datetime
 
+
 class MoodValues(TypedDict):
-    joy: Optional[int | None]
-    interest: Optional[int | None]
-    calm: Optional[int | None]
-    energy: Optional[int | None]
-    anxiety: Optional[int | None]
-    sadness: Optional[int | None]
-    irritation: Optional[int | None]
-    fatigue: Optional[int | None]
-    fear: Optional[int | None]
-    confidence: Optional[int | None]
-    sleep: Optional[int | None]
+    joy: int | None | None
+    interest: int | None | None
+    calm: int | None | None
+    energy: int | None | None
+    anxiety: int | None | None
+    sadness: int | None | None
+    irritation: int | None | None
+    fatigue: int | None | None
+    fear: int | None | None
+    confidence: int | None | None
+    sleep: int | None | None
+
 
 class DayPayload(TypedDict):
     day: date
     values: MoodValues
+
 
 @dataclass(frozen=True)
 class BatchMoodLogUpsertResult:
@@ -58,6 +74,7 @@ class BatchMoodLogUpsertResult:
     rows_written: int
     min_day: date | None
     max_day: date | None
+
 
 class MoodLogRepo:
     def __init__(self, engine: AsyncEngine) -> None:
@@ -84,7 +101,7 @@ class MoodLogRepo:
 
     @staticmethod
     def _mood_values_validator(
-            values: dict[str, int | None],
+        values: dict[str, int | None],
     ) -> None:
         if not values or all(v is None for v in values.values()):
             raise EmptyUpsertPayloadError("No fields to upsert")
@@ -93,9 +110,9 @@ class MoodLogRepo:
             raise UnknownFieldError(f"Unknown fields: {','.join(unknown_keys)}")
 
     async def upsert_mood_log_by_day(
-            self,
-            day: date,
-            values: dict[str, int | None],
+        self,
+        day: date,
+        values: dict[str, int | None],
     ) -> MoodLog:
         self._mood_values_validator(values=values)
 
@@ -104,7 +121,7 @@ class MoodLogRepo:
             .values(day=day, **values)
             .on_conflict_do_update(
                 index_elements=[mood_log.c.day],
-                set_={k: v for k, v in values.items() if v is not None}
+                set_={k: v for k, v in values.items() if v is not None},
             )
             .returning(*mood_log.c)
         )
@@ -116,8 +133,7 @@ class MoodLogRepo:
                 return self._to_mood_log(row)
         except IntegrityError as e:
             logger.exception(
-                "MoodLogRepo.upsert_mood_log_by_day failed "
-                "(day=%s, fields=%s)",
+                "MoodLogRepo.upsert_mood_log_by_day failed (day=%s, fields=%s)",
                 day,
                 list(values.keys()),
             )
@@ -135,22 +151,20 @@ class MoodLogRepo:
             flattened_data.append({"day": p["day"], **p["values"]})
 
         rows_in = len(payload)
-        min_day = min(p['day'] for p in payload)
-        max_day = max(p['day'] for p in payload)
+        min_day = min(p["day"] for p in payload)
+        max_day = max(p["day"] for p in payload)
 
         stmt = sqlite_insert(mood_log).values(flattened_data)
 
         upsert_stmt = stmt.on_conflict_do_update(
-                index_elements=[mood_log.c.day],
-                set_ = {
-                    table_col.name:
-                        func.coalesce(
-                            stmt.excluded[table_col.name],
-                            mood_log.c[table_col.name]
-                        )
-                    for table_col in mood_log.c
-                    if table_col.name not in NON_UPDATABLE
-                }
+            index_elements=[mood_log.c.day],
+            set_={
+                table_col.name: func.coalesce(
+                    stmt.excluded[table_col.name], mood_log.c[table_col.name]
+                )
+                for table_col in mood_log.c
+                if table_col.name not in NON_UPDATABLE
+            },
         )
 
         try:
@@ -159,26 +173,18 @@ class MoodLogRepo:
                 rows_written = int(res.rowcount or 0)
 
                 return BatchMoodLogUpsertResult(
-                    rows_in=rows_in,
-                    rows_written=rows_written,
-                    min_day=min_day,
-                    max_day=max_day
+                    rows_in=rows_in, rows_written=rows_written, min_day=min_day, max_day=max_day
                 )
         except IntegrityError as e:
             logger.exception(
-                "MoodLogRepo.batch_upsert_mood_logs failed "
-                "(min_day=%s, max_day=%s)",
+                "MoodLogRepo.batch_upsert_mood_logs failed (min_day=%s, max_day=%s)",
                 str(min_day),
                 str(max_day),
             )
             raise map_integrity_error(e, mood_log.name) from e
 
     async def get_mood_log_by_day(self, day: date) -> MoodLog | None:
-        stmt = (
-            select(*mood_log.c)
-            .where(mood_log.c.day == day)
-            .limit(1)
-        )
+        stmt = select(*mood_log.c).where(mood_log.c.day == day).limit(1)
 
         async with self._engine.connect() as conn:
             res = await conn.execute(stmt)
@@ -198,10 +204,7 @@ class MoodLogRepo:
             return [self._to_mood_log(row) for row in rows]
 
     async def delete_mood_log_by_day(self, day: date) -> int:
-        stmt = (
-            delete(mood_log)
-            .where(mood_log.c.day == day)
-        )
+        stmt = delete(mood_log).where(mood_log.c.day == day)
 
         async with self._engine.begin() as conn:
             res: CursorResult = await conn.execute(stmt)

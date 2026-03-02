@@ -1,15 +1,16 @@
 import logging
 
-from aiogram import types, F
+from aiogram import F, types
 from aiogram.fsm.context import FSMContext
 
 from daily_flow.app.container import Container
+from daily_flow.ui.telegram.handlers.idea.sphere.get import get_all_spheres_text
 from daily_flow.ui.telegram.keyboards.idea import IdeaMenu
 from daily_flow.ui.telegram.runtime import router
 from daily_flow.ui.telegram.states import SphereDeleteForm
-from daily_flow.ui.telegram.handlers.idea.sphere.get import get_all_spheres_text
 
 logger = logging.getLogger(__name__)
+
 
 @router.message(F.text == IdeaMenu.BTN_DELETE_SPHERE)
 async def delete_sphere(message: types.Message, state: FSMContext, db_container: Container):
@@ -18,8 +19,7 @@ async def delete_sphere(message: types.Message, state: FSMContext, db_container:
     spheres_text = await get_all_spheres_text(db_container)
 
     await message.answer(
-        "Введи точну назву (name) сфери, яку треба видалити."
-        f"{spheres_text}",
+        f"Введи точну назву (name) сфери, яку треба видалити.{spheres_text}",
         reply_markup=IdeaMenu.get(),
         parse_mode="Markdown",
     )
@@ -39,9 +39,14 @@ async def perform_delete_sphere(message: types.Message, state: FSMContext, db_co
         if deleted > 0:
             await message.answer("✅ Сферу видалено.", reply_markup=IdeaMenu.get())
         else:
-            await message.answer("🔍 Сферу з таким name не знайдено (або вже була видалена).", reply_markup=IdeaMenu.get())
+            await message.answer(
+                "🔍 Сферу з таким name не знайдено (або вже була видалена).",
+                reply_markup=IdeaMenu.get(),
+            )
 
     except Exception as e:
         logger.exception("Sphere delete_sphere_by_name failed: %s", e)
         await state.clear()
-        await message.answer("❌ Сталася помилка під час видалення сфери.", reply_markup=IdeaMenu.get())
+        await message.answer(
+            "❌ Сталася помилка під час видалення сфери.", reply_markup=IdeaMenu.get()
+        )

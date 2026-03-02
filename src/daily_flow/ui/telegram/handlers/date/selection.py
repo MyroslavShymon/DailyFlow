@@ -1,3 +1,7 @@
+from aiogram import F, types
+from aiogram.filters import StateFilter
+from aiogram.fsm.context import FSMContext
+
 from daily_flow.app.container import Container
 from daily_flow.ui.telegram.handlers.common_mood_log.get import perform_common_mood_log_get
 from daily_flow.ui.telegram.handlers.common_mood_log.tag.delete import perform_tag_impact_delete
@@ -5,14 +9,14 @@ from daily_flow.ui.telegram.handlers.common_mood_log.tag.get import perform_tag_
 from daily_flow.ui.telegram.handlers.mood_log.delete import perform_mood_log_delete
 from daily_flow.ui.telegram.handlers.mood_log.get import perform_mood_log_get
 from daily_flow.ui.telegram.runtime import router
-from daily_flow.ui.telegram.states import CommonMoodGetForm, MoodGetForm, MoodDeleteForm, TagImpactGetForm, \
-    TagImpactDeleteForm
-from daily_flow.ui.telegram.utils.date_selection import DateAction, DATE_PATTERN
-
-from aiogram import types, F
-from aiogram.fsm.context import FSMContext
-from aiogram.filters import StateFilter
-
+from daily_flow.ui.telegram.states import (
+    CommonMoodGetForm,
+    MoodDeleteForm,
+    MoodGetForm,
+    TagImpactDeleteForm,
+    TagImpactGetForm,
+)
+from daily_flow.ui.telegram.utils.date_selection import DATE_PATTERN, DateAction
 from daily_flow.ui.telegram.utils.payload import unpack_optional
 
 FORMS_MAPPING = {
@@ -24,31 +28,31 @@ FORMS_MAPPING = {
 }
 
 FUNC_MAPPING = {
-    f"common_mood_log:{DateAction.GET}": lambda message, state, date_val, opt, db: perform_common_mood_log_get(
-        message=message,
-        state=state,
-        date_str=date_val,
-        db_container=db
+    f"common_mood_log:{DateAction.GET}": lambda message,
+    state,
+    date_val,
+    opt,
+    db: perform_common_mood_log_get(
+        message=message, state=state, date_str=date_val, db_container=db
     ),
     f"mood_log:{DateAction.GET}": lambda message, state, date_val, opt, db: perform_mood_log_get(
-        message=message,
-        state=state,
-        date_str=date_val,
-        db_container=db
+        message=message, state=state, date_str=date_val, db_container=db
     ),
-    f"mood_log:{DateAction.DELETE}": lambda message, state, date_val, opt, db: perform_mood_log_delete(
-        message=message,
-        state=state,
-        date_str=date_val,
-        db_container=db
-    ),
-    f"tag_impact:{DateAction.GET}": lambda message, state, date_val, opt, db: perform_tag_impact_get(
-        message=message,
-        state=state,
-        date_str=date_val,
-        db_container=db
-    ),
-    f"tag_impact:{DateAction.DELETE}": lambda message, state, date_val, opt, db: perform_tag_impact_delete(
+    f"mood_log:{DateAction.DELETE}": lambda message,
+    state,
+    date_val,
+    opt,
+    db: perform_mood_log_delete(message=message, state=state, date_str=date_val, db_container=db),
+    f"tag_impact:{DateAction.GET}": lambda message,
+    state,
+    date_val,
+    opt,
+    db: perform_tag_impact_get(message=message, state=state, date_str=date_val, db_container=db),
+    f"tag_impact:{DateAction.DELETE}": lambda message,
+    state,
+    date_val,
+    opt,
+    db: perform_tag_impact_delete(
         message=message,
         state=state,
         date_str=date_val,
@@ -60,11 +64,12 @@ FUNC_MAPPING = {
 DATE_CTX_KEY = "date_ctx_key"
 DATE_OPT_KEY = "date_optional_vals"
 
+
 @router.callback_query(F.data.startswith("date_"))
 async def process_date_selection(
-        callback: types.CallbackQuery,
-        state: FSMContext,
-        db_container: Container,
+    callback: types.CallbackQuery,
+    state: FSMContext,
+    db_container: Container,
 ):
     await callback.answer()
 
@@ -101,14 +106,15 @@ async def process_date_selection(
     await state.clear()
     await callback.message.delete()
 
+
 @router.message(
     StateFilter(*{f.waiting_for_date for f in FORMS_MAPPING.values()}),
-    F.text.regexp(DATE_PATTERN.pattern)
+    F.text.regexp(DATE_PATTERN.pattern),
 )
 async def process_manual_date_ok(
-        message: types.Message,
-        state: FSMContext,
-        db_container: Container,
+    message: types.Message,
+    state: FSMContext,
+    db_container: Container,
 ):
     data = await state.get_data()
     ctx_key = data.get(DATE_CTX_KEY)
@@ -127,9 +133,12 @@ async def process_manual_date_ok(
 
     await executor(message, state, message.text, optional_vals, db_container)
 
+
 @router.message(
     StateFilter(*{f.waiting_for_date for f in FORMS_MAPPING.values()}),
-    ~F.text.regexp(DATE_PATTERN.pattern)
+    ~F.text.regexp(DATE_PATTERN.pattern),
 )
 async def process_wrong_date_format(message: types.Message):
-    await message.answer("⚠️ Це не схоже на дату. Будь ласка, введи дату або натисни кнопку 'Скасувати'.")
+    await message.answer(
+        "⚠️ Це не схоже на дату. Будь ласка, введи дату або натисни кнопку 'Скасувати'."
+    )

@@ -1,13 +1,21 @@
 import logging
+
 from sqlalchemy.exc import SQLAlchemyError
 
-from daily_flow.db.errors import MissingRequiredFieldError, DuplicateError, DBIntegrityError, RepoError, \
-    UnknownFieldError, ParentNotFoundError
-from daily_flow.db.repositories.idea_repo import IdeaRepo, Sphere, Idea
-from daily_flow.services.errors import ConflictError, UserInputError, TemporaryError
-from daily_flow.services.idea.dto import UpsertSphereDTO, UpsertIdeaDTO, SphereToIdeaDTO
+from daily_flow.db.errors import (
+    DBIntegrityError,
+    DuplicateError,
+    MissingRequiredFieldError,
+    ParentNotFoundError,
+    RepoError,
+    UnknownFieldError,
+)
+from daily_flow.db.repositories.idea_repo import Idea, IdeaRepo, Sphere
+from daily_flow.services.errors import ConflictError, TemporaryError, UserInputError
+from daily_flow.services.idea.dto import SphereToIdeaDTO, UpsertIdeaDTO, UpsertSphereDTO
 
 logger = logging.getLogger(__name__)
+
 
 class IdeaService:
     def __init__(self, repo: IdeaRepo) -> None:
@@ -20,10 +28,7 @@ class IdeaService:
         description = payload.pop("description", None)
 
         try:
-            sphere = await self._repo.upsert_sphere(
-                name=name,
-                description=description
-            )
+            sphere = await self._repo.upsert_sphere(name=name, description=description)
 
             return sphere
         except DuplicateError as e:
@@ -44,10 +49,7 @@ class IdeaService:
         values = payload
 
         try:
-            idea = await self._repo.upsert_idea(
-                title=title,
-                payload=values
-            )
+            idea = await self._repo.upsert_idea(title=title, payload=values)
             return idea
         except DuplicateError as e:
             raise ConflictError(str(e)) from e
@@ -70,7 +72,7 @@ class IdeaService:
             logger.exception(
                 "IdeaService.assign_sphere_to_idea failed (sphere_id=%s, idea_id=%s)",
                 sphere_id,
-                idea_id
+                idea_id,
             )
             raise TemporaryError("Database error. Please try again.") from e
 
@@ -114,7 +116,6 @@ class IdeaService:
             return await self._repo.get_all_ideas()
         except (RepoError, SQLAlchemyError) as e:
             raise TemporaryError("Database error. Please try again.") from e
-
 
     async def get_all_spheres(self) -> list[Sphere]:
         try:

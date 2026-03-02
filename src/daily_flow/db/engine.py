@@ -1,9 +1,10 @@
 import logging
 
 from sqlalchemy import event
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncEngine
+from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
 logger = logging.getLogger(__name__)
+
 
 async def build_engine(database_url: str, is_database_echo: bool) -> AsyncEngine:
     logger.info("DATABASE_URL=%s", database_url)
@@ -11,10 +12,11 @@ async def build_engine(database_url: str, is_database_echo: bool) -> AsyncEngine
     engine = create_async_engine(
         database_url,
         connect_args={"check_same_thread": False},
-        echo=is_database_echo, #виключити ближче ддо деплою
+        echo=is_database_echo,  # виключити ближче ддо деплою
     )
 
     if "sqlite" in database_url:
+
         @event.listens_for(engine.sync_engine, "connect")
         def _set_sqlite_pragma(dbapi_connection, connection_record):
             cursor = dbapi_connection.cursor()

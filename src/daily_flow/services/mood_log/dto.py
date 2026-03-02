@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field
 
 Score1to4 = Annotated[int, Field(ge=1, le=4)]
 
+
 class UpsertMoodLogDTO(BaseModel):
     day: date
     joy: Score1to4 | None = None

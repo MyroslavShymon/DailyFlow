@@ -1,8 +1,8 @@
 import hashlib
 from pathlib import Path
-from typing import Union
 
-def calculate_file_hash(file_path: Union[str, Path], chunk_size: int = 65536) -> str:
+
+def calculate_file_hash(file_path: str | Path, chunk_size: int = 65536) -> str:
     path = Path(file_path)
     if not path.is_file():
         raise FileNotFoundError(f"Can't hash a non-existent file: {file_path}")

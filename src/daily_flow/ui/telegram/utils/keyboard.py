@@ -2,10 +2,10 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 
 def build_inline_keyboard(
-        field_name: str,
-        button_names: list[str],
-        start_index: int,
-        button_adjusts: list[int],
+    field_name: str,
+    button_names: list[str],
+    start_index: int,
+    button_adjusts: list[int],
 ):
     builder = InlineKeyboardBuilder()
 

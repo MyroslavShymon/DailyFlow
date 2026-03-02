@@ -8,9 +8,10 @@ from daily_flow.ingest.schemas.base import BaseIngestContract
 class CommonMoodLogIngestContract(BaseIngestContract):
     optional_columns: tuple[str, ...]
 
-COMMON_MOOD_LOG_INGEST_CONTRACT = CommonMoodLogIngestContract (
+
+COMMON_MOOD_LOG_INGEST_CONTRACT = CommonMoodLogIngestContract(
     dataset="common_mood_log",
     source_type=IngestSourceType.CSV,
     required_columns=tuple(["day"]),
-    optional_columns=("mood", "note")
+    optional_columns=("mood", "note"),
 )

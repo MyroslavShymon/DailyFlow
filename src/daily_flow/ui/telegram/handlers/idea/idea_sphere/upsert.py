@@ -1,6 +1,6 @@
 import logging
 
-from aiogram import types, F
+from aiogram import F, types
 from aiogram.fsm.context import FSMContext
 
 from daily_flow.app.container import Container
@@ -23,15 +23,16 @@ async def assign_sphere_to_idea(message: types.Message, state: FSMContext, db_co
     ideas_text = await get_all_ideas_text(db_container)
 
     await message.answer(
-        "Введи **ID ідеї**, до якої треба додати сферу:\n\n"
-        f"{ideas_text}",
+        f"Введи **ID ідеї**, до якої треба додати сферу:\n\n{ideas_text}",
         reply_markup=IdeaMenu.get(),
         parse_mode="Markdown",
     )
 
 
 @router.message(SphereToIdeaAssignForm.waiting_for_idea_id)
-async def assign_sphere_to_idea_step1(message: types.Message, state: FSMContext, db_container: Container):
+async def assign_sphere_to_idea_step1(
+    message: types.Message, state: FSMContext, db_container: Container
+):
     raw = (message.text or "").strip()
 
     try:
@@ -45,15 +46,16 @@ async def assign_sphere_to_idea_step1(message: types.Message, state: FSMContext,
     spheres_text = await get_all_spheres_text(db_container)
 
     await message.answer(
-        "Тепер введи **ID сфери**, яку треба додати до ідеї:\n\n"
-        f"{spheres_text}",
+        f"Тепер введи **ID сфери**, яку треба додати до ідеї:\n\n{spheres_text}",
         reply_markup=IdeaMenu.get(),
         parse_mode="Markdown",
     )
 
 
 @router.message(SphereToIdeaAssignForm.waiting_for_sphere_id)
-async def assign_sphere_to_idea_step2(message: types.Message, state: FSMContext, db_container: Container):
+async def assign_sphere_to_idea_step2(
+    message: types.Message, state: FSMContext, db_container: Container
+):
     data = await state.get_data()
     idea_id = data.get(KEY_IDEA_ID)
 
@@ -71,17 +73,15 @@ async def assign_sphere_to_idea_step2(message: types.Message, state: FSMContext,
         await state.clear()
 
         if is_inserted:
-            await message.answer(
-                "✅ Сферу додано до ідеї!",
-                reply_markup=IdeaMenu.get()
-            )
+            await message.answer("✅ Сферу додано до ідеї!", reply_markup=IdeaMenu.get())
         else:
             await message.answer(
-                "ℹ️ Ця сфера вже привʼязана до цієї ідеї.",
-                reply_markup=IdeaMenu.get()
+                "ℹ️ Ця сфера вже привʼязана до цієї ідеї.", reply_markup=IdeaMenu.get()
             )
 
     except Exception as e:
         logger.exception("Idea assign_sphere_to_idea failed: %s", e)
         await state.clear()
-        await message.answer("❌ Сталася помилка під час привʼязки сфери.", reply_markup=IdeaMenu.get())
+        await message.answer(
+            "❌ Сталася помилка під час привʼязки сфери.", reply_markup=IdeaMenu.get()
+        )

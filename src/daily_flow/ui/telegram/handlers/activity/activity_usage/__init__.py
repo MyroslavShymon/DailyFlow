@@ -1,3 +1,3 @@
-from . import upsert
-from . import get
-from . import delete
+from . import delete, get, upsert
+
+__all__ = ["delete", "get", "upsert"]

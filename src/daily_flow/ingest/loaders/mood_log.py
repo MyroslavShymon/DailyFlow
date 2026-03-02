@@ -1,12 +1,17 @@
 import pandas as pd
 
-from daily_flow.db.repositories.mood_log_repo import MoodLogRepo, DayPayload, BatchMoodLogUpsertResult
-from daily_flow.ingest.schemas.mood_log import MoodLogIngestContract 
+from daily_flow.db.repositories.mood_log_repo import (
+    BatchMoodLogUpsertResult,
+    DayPayload,
+    MoodLogRepo,
+)
+from daily_flow.ingest.schemas.mood_log import MoodLogIngestContract
+
 
 async def load_mood_log(
-        df: pd.DataFrame,
-        contract: MoodLogIngestContract ,
-        mood_log_repo: MoodLogRepo,
+    df: pd.DataFrame,
+    contract: MoodLogIngestContract,
+    mood_log_repo: MoodLogRepo,
 ) -> BatchMoodLogUpsertResult:
     df_db = df.copy()
 
@@ -16,16 +21,12 @@ async def load_mood_log(
 
     df_payload = df_db.astype(object).where(pd.notnull(df_db), None)
 
-    mood_logs_records = df_payload.to_dict(orient='records')
+    mood_logs_records = df_payload.to_dict(orient="records")
 
     print(f"{mood_logs_records=}")
 
-    mood_logs_batch_payload: list[DayPayload]  = [
-        {
-            "day": record.pop("day"),
-            "values": record
-        } for record in mood_logs_records
+    mood_logs_batch_payload: list[DayPayload] = [
+        {"day": record.pop("day"), "values": record} for record in mood_logs_records
     ]
 
     return await mood_log_repo.batch_upsert_mood_logs(payload=mood_logs_batch_payload)
-

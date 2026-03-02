@@ -6,46 +6,39 @@ from aiogram.types import Message
 from daily_flow.ui.telegram.keyboards.activity import ActivityMenu
 from daily_flow.ui.telegram.keyboards.common_mood import CommonMoodMenu
 from daily_flow.ui.telegram.keyboards.idea import IdeaMenu
-from daily_flow.ui.telegram.runtime import router
 from daily_flow.ui.telegram.keyboards.main import MainMenu
 from daily_flow.ui.telegram.keyboards.mood import MoodMenu
+from daily_flow.ui.telegram.runtime import router
 
 
 @router.message(StateFilter(None), F.text == MainMenu.BTN_MOOD)
 async def mood(message: Message, state: FSMContext):
     await state.clear()
-    await message.answer(
-        "Що саме ти хочеш зробити з емоціями:",
-        reply_markup=MoodMenu.get()
-    )
+    await message.answer("Що саме ти хочеш зробити з емоціями:", reply_markup=MoodMenu.get())
+
 
 @router.message(StateFilter(None), F.text == MainMenu.BTN_COMMON_MOOD)
 async def common_mood(message: Message, state: FSMContext):
     await state.clear()
-    await message.answer(
-        "Що саме ти хочеш зробити з настроєм:",
-        reply_markup=CommonMoodMenu.get()
-    )
+    await message.answer("Що саме ти хочеш зробити з настроєм:", reply_markup=CommonMoodMenu.get())
+
 
 @router.message(StateFilter(None), F.text == MainMenu.BTN_IDEAS)
-async def common_mood(message: Message, state: FSMContext):
+async def ideas(message: Message, state: FSMContext):
     await state.clear()
-    await message.answer(
-        "Що саме ти хочеш зробити з ідеями:",
-        reply_markup=IdeaMenu.get()
-    )
+    await message.answer("Що саме ти хочеш зробити з ідеями:", reply_markup=IdeaMenu.get())
+
 
 @router.message(StateFilter(None), F.text == MainMenu.BTN_ACTIVITY)
 async def activity(message: Message, state: FSMContext):
     await state.clear()
     await message.answer(
-        "Що саме ти хочеш зробити з активностями:",
-        reply_markup=ActivityMenu.get()
+        "Що саме ти хочеш зробити з активностями:", reply_markup=ActivityMenu.get()
     )
+
 
 @router.message(StateFilter(None), Command("start"))
 async def start(message: Message):
     await message.answer(
-        "Вітаю! Я твій щоденник. Оберіть з чим ми працюємо:",
-        reply_markup=MainMenu.get()
+        "Вітаю! Я твій щоденник. Оберіть з чим ми працюємо:", reply_markup=MainMenu.get()
     )

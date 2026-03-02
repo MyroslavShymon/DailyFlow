@@ -1,17 +1,18 @@
-from typing import Callable, Any, Dict, Awaitable
+from collections.abc import Awaitable, Callable
+from typing import Any
 
 from aiogram import BaseMiddleware
-from aiogram.types import TelegramObject, Message
+from aiogram.types import Message, TelegramObject
 
 from daily_flow.config.config import ADMIN_TG_ID
 
 
 class AuthMiddleware(BaseMiddleware):
     async def __call__(
-            self,
-            handler: Callable[[TelegramObject, Dict[str, Any]], Awaitable[Any]],
-            event: TelegramObject,
-            data: Dict[str, Any]
+        self,
+        handler: Callable[[TelegramObject, dict[str, Any]], Awaitable[Any]],
+        event: TelegramObject,
+        data: dict[str, Any],
     ) -> Any:
         user_id = event.from_user.id
 

@@ -4,7 +4,10 @@ import pandas as pd
 
 from daily_flow.ingest.schemas.mood_log import MoodLogIngestContract
 from daily_flow.ingest.validators.metrics import BasicMetrics
-from daily_flow.ingest.validators.mood_log.definitions import MoodLogValidationErrors, MoodLogValidationWarnings
+from daily_flow.ingest.validators.mood_log.definitions import (
+    MoodLogValidationErrors,
+    MoodLogValidationWarnings,
+)
 
 
 class MoodLogExtraMetrics(TypedDict):
@@ -20,15 +23,17 @@ class MoodLogExtraMetrics(TypedDict):
     rows_missing_day: int
     rows_duplicate_day: int
 
+
 class MoodLogMetrics(BasicMetrics, MoodLogExtraMetrics):
     pass
 
+
 def get_mood_log_metrics(
-        df: pd.DataFrame,
-        error_masks: dict[MoodLogValidationErrors, pd.Series],
-        warning_masks: dict[MoodLogValidationWarnings, pd.Series],
-        contract: MoodLogIngestContract,
-        basic_metrics: BasicMetrics
+    df: pd.DataFrame,
+    error_masks: dict[MoodLogValidationErrors, pd.Series],
+    warning_masks: dict[MoodLogValidationWarnings, pd.Series],
+    contract: MoodLogIngestContract,
+    basic_metrics: BasicMetrics,
 ) -> MoodLogMetrics:
     basic_extra_metrics: MoodLogExtraMetrics = {
         "unique_days": 0,
@@ -44,10 +49,7 @@ def get_mood_log_metrics(
         "rows_duplicate_day": 0,
     }
     if basic_metrics["rows_total"] == 0:
-        return cast(MoodLogMetrics, {
-            **basic_metrics,
-            **basic_extra_metrics
-        })
+        return cast(MoodLogMetrics, {**basic_metrics, **basic_extra_metrics})
 
     mood_cols_with_value_mask = df[list(contract.mood_columns)].notna().any(axis=1)
 
@@ -63,13 +65,10 @@ def get_mood_log_metrics(
 
     return {
         **basic_metrics,
-
         "unique_days": df["day"].dropna().nunique(),
         "min_day": min_day,
         "max_day": max_day,
-
         "rows_with_any_mood": int(mood_cols_with_value_mask.sum()),
-
         "rows_missing_day": get_count(MoodLogValidationErrors.MISSING_DAY),
         "rows_duplicate_day": get_count(MoodLogValidationErrors.DAY_DUPLICATE),
         "rows_out_of_range": get_count(MoodLogValidationErrors.MOOD_IS_OUT_OF_RANGE),

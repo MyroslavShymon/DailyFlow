@@ -1,11 +1,14 @@
 import pandas as pd
 
-from daily_flow.db.repositories.common_mood_repo import CommonMoodLogRepo, BatchCommonMoodLogUpsertResult, DayPayload
+from daily_flow.db.repositories.common_mood_repo import (
+    BatchCommonMoodLogUpsertResult,
+    CommonMoodLogRepo,
+    DayPayload,
+)
 
 
 async def load_common_mood_log(
-        df: pd.DataFrame,
-        common_mood_log_repo: CommonMoodLogRepo
+    df: pd.DataFrame, common_mood_log_repo: CommonMoodLogRepo
 ) -> BatchCommonMoodLogUpsertResult:
     df_db = df.copy()
 
@@ -15,13 +18,12 @@ async def load_common_mood_log(
 
     df_payload = df_db.astype(object).where(pd.notnull(df_db), None)
 
-    common_mood_logs_records = df_payload.to_dict(orient='records')
+    common_mood_logs_records = df_payload.to_dict(orient="records")
 
-    common_mood_logs_batch_payload: list[DayPayload]  = [
-        {
-            "day": record.pop("day"),
-            "values": record
-        } for record in common_mood_logs_records
+    common_mood_logs_batch_payload: list[DayPayload] = [
+        {"day": record.pop("day"), "values": record} for record in common_mood_logs_records
     ]
 
-    return await common_mood_log_repo.batch_upsert_common_mood_logs(payload=common_mood_logs_batch_payload)
+    return await common_mood_log_repo.batch_upsert_common_mood_logs(
+        payload=common_mood_logs_batch_payload
+    )

@@ -1,15 +1,16 @@
 import logging
-from typing import Mapping, Any
+from collections.abc import Mapping
+from typing import Any
 
-from sqlalchemy.ext.asyncio import AsyncEngine
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy import CursorResult, and_, delete, exists, select
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
-from sqlalchemy import select, delete, exists, and_, CursorResult
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncEngine
 
-from daily_flow.db.errors import map_integrity_error, ParentNotFoundError
-from daily_flow.db.schema import activity, category, category_activity
+from daily_flow.db.errors import ParentNotFoundError, map_integrity_error
 from daily_flow.db.repositories.activity.activity_repo import Activity
 from daily_flow.db.repositories.activity.category_repo import Category
+from daily_flow.db.schema import activity, category, category_activity
 
 logger = logging.getLogger(__name__)
 
@@ -32,23 +33,19 @@ class ActivityCategoryRepo:
             id=row_mapping["id"],
             title=row_mapping["title"],
             description=row_mapping["description"],
-
             social_type=row_mapping["social_type"],
             people_count_min=row_mapping["people_count_min"],
             people_count_max=row_mapping["people_count_max"],
             specific_with=row_mapping["specific_with"],
-
             time_context=row_mapping["time_context"],
             duration_min_minutes=row_mapping["duration_min_minutes"],
             duration_max_minutes=row_mapping["duration_max_minutes"],
             time_of_day=row_mapping["time_of_day"],
-
             energy_required_min=row_mapping["energy_required_min"],
             energy_required_max=row_mapping["energy_required_max"],
             energy_gain=row_mapping["energy_gain"],
             mood_min=row_mapping["mood_min"],
             mood_max=row_mapping["mood_max"],
-
             cost_level=row_mapping["cost_level"],
             requires_preparation=bool(row_mapping["requires_preparation"]),
             preparation_notes=row_mapping["preparation_notes"],
@@ -57,9 +54,7 @@ class ActivityCategoryRepo:
 
     @staticmethod
     async def _assert_exists(conn, table, entity_id: int, name: str) -> None:
-        exists_row = (await conn.execute(
-            select(exists().where(table.c.id == entity_id))
-        )).scalar()
+        exists_row = (await conn.execute(select(exists().where(table.c.id == entity_id)))).scalar()
 
         if not exists_row:
             raise ParentNotFoundError(f"There is no {name} entity with such id")
@@ -74,10 +69,12 @@ class ActivityCategoryRepo:
                     sqlite_insert(category_activity)
                     .values(category_id=category_id, activity_id=activity_id)
                     .on_conflict_do_nothing(
-                        index_elements=[category_activity.c.category_id, category_activity.c.activity_id]
+                        index_elements=[
+                            category_activity.c.category_id,
+                            category_activity.c.activity_id,
+                        ]
                     )
                 )
-
 
                 res: CursorResult = await conn.execute(stmt)
                 return (res.rowcount or 0) > 0
@@ -96,13 +93,10 @@ class ActivityCategoryRepo:
             await self._assert_exists(conn, activity, activity_id, "activity")
             await self._assert_exists(conn, category, category_id, "category")
 
-            stmt = (
-                delete(category_activity)
-                .where(
-                    and_(
-                        category_activity.c.category_id == category_id,
-                        category_activity.c.activity_id == activity_id,
-                    )
+            stmt = delete(category_activity).where(
+                and_(
+                    category_activity.c.category_id == category_id,
+                    category_activity.c.activity_id == activity_id,
                 )
             )
 

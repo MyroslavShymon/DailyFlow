@@ -1,6 +1,6 @@
 import logging
 
-from aiogram import types, F, Bot
+from aiogram import Bot, F, types
 from aiogram.fsm.context import FSMContext
 
 from daily_flow.ui.telegram.constants.idea import sphere_mapping
@@ -11,14 +11,13 @@ from daily_flow.ui.telegram.utils.errors import handle_message_error
 from daily_flow.ui.telegram.utils.form_render import get_form_keyboard
 from daily_flow.ui.telegram.utils.forms_state import (
     TGForm,
+    finish_text_input,
     form_get,
+    form_set_current_field,
     form_set_last_msg,
     form_set_value,
-    form_set_current_field,
     refresh_form_message,
-    finish_text_input,
 )
-
 
 logger = logging.getLogger(__name__)
 
@@ -32,9 +31,7 @@ async def edit_any_sphere_field(callback: types.CallbackQuery, state: FSMContext
     field_name = callback.data.split(":")[1]
     await form_set_current_field(state, SPHERE_FORM, field_name)
 
-    await callback.message.edit_text(
-        f"Введіть нові дані про {sphere_mapping.get(field_name)}:"
-    )
+    await callback.message.edit_text(f"Введіть нові дані про {sphere_mapping.get(field_name)}:")
     await state.set_state(SphereForm.waiting_input)
 
 
@@ -58,7 +55,9 @@ async def process_sphere_input(message: types.Message, state: FSMContext, bot: B
 
     elif field_name == "description":
         if not value:
-            await handle_message_error(message, "❌ Опис не може бути порожнім рядком (або не заповнюй його).")
+            await handle_message_error(
+                message, "❌ Опис не може бути порожнім рядком (або не заповнюй його)."
+            )
             return
         await form_set_value(state, SPHERE_FORM, "description", value)
 
@@ -88,10 +87,7 @@ async def render_upsert_sphere(state: FSMContext) -> str:
     }
 
     text = "🧭 **Сфера**\n\n"
-    text += "\n".join(
-        f"{sphere_mapping.get(k).capitalize()}: {v}"
-        for k, v in sphere_data.items()
-    )
+    text += "\n".join(f"{sphere_mapping.get(k).capitalize()}: {v}" for k, v in sphere_data.items())
 
     return text
 

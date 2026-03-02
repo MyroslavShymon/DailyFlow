@@ -1,4 +1,4 @@
-from aiogram import Router, Dispatcher
+from aiogram import Dispatcher, Router
 
 from daily_flow.ui.telegram.middlewares.auth_middleware import AuthMiddleware
 

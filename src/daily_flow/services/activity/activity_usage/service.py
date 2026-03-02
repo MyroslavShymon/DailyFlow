@@ -1,20 +1,25 @@
 import logging
+
 from sqlalchemy.exc import SQLAlchemyError
 
 from daily_flow.db.errors import (
-    DuplicateError,
-    MissingRequiredFieldError,
-    UnknownFieldError,
-    InvalidScoreError,
-    ParentNotFoundError,
     DBIntegrityError,
+    DuplicateError,
+    InvalidScoreError,
+    MissingRequiredFieldError,
+    ParentNotFoundError,
     RepoError,
+    UnknownFieldError,
 )
-from daily_flow.db.repositories.activity.activity_usage_repo import ActivityUsageRepo, ActivityUsage
-from daily_flow.services.activity.activity_usage.dto import UpsertActivityUsageDTO, ActivityUsagePeriodDTO
-from daily_flow.services.errors import ConflictError, UserInputError, TemporaryError
+from daily_flow.db.repositories.activity.activity_usage_repo import ActivityUsage, ActivityUsageRepo
+from daily_flow.services.activity.activity_usage.dto import (
+    ActivityUsagePeriodDTO,
+    UpsertActivityUsageDTO,
+)
+from daily_flow.services.errors import ConflictError, TemporaryError, UserInputError
 
 logger = logging.getLogger(__name__)
+
 
 class ActivityUsageService:
     def __init__(self, repo: ActivityUsageRepo) -> None:
@@ -38,11 +43,17 @@ class ActivityUsageService:
             )
         except DuplicateError as e:
             raise ConflictError(str(e)) from e
-        except (MissingRequiredFieldError, UnknownFieldError, InvalidScoreError, ParentNotFoundError) as e:
+        except (
+            MissingRequiredFieldError,
+            UnknownFieldError,
+            InvalidScoreError,
+            ParentNotFoundError,
+        ) as e:
             raise UserInputError(str(e)) from e
         except (DBIntegrityError, RepoError) as e:
             logger.exception(
-                "ActivityUsageService.upsert_activity_usage failed (usage_id=%s, activity_id=%s, used_at=%s)",
+                "ActivityUsageService.upsert_activity_usage failed "
+                "(usage_id=%s, activity_id=%s, used_at=%s)",
                 usage_id,
                 activity_id,
                 str(used_at),
@@ -85,7 +96,9 @@ class ActivityUsageService:
         except (RepoError, SQLAlchemyError) as e:
             raise TemporaryError("Database error. Please try again.") from e
 
-    async def get_activity_usages_by_period(self, dto: ActivityUsagePeriodDTO) -> list[ActivityUsage]:
+    async def get_activity_usages_by_period(
+        self, dto: ActivityUsagePeriodDTO
+    ) -> list[ActivityUsage]:
         payload = dto.model_dump()
         date_from = payload["date_from"]
         date_to = payload["date_to"]
