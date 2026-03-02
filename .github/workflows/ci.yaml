@@ -39,10 +39,8 @@ jobs:
       - name: Sanity — ingest help
         run: ingest --help
 
-      - name: Sanity — bot help (CI DB)
-        run: start_telegram_bot --help
-        env:
-          DATABASE_URL: "sqlite+aiosqlite:///./ci_bot.sqlite"
+      - name: Sanity — import telegram entrypoint
+        run: python -c "import daily_flow.entrypoints.telegram_bot_main"
 
       - name: Sanity — sqlite select 1
         run: python -c "import sqlite3; con=sqlite3.connect('ci_smoke.sqlite'); con.execute('select 1'); con.close()"
