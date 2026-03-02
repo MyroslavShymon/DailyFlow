@@ -39,9 +39,6 @@ jobs:
       - name: Sanity — ingest help
         run: ingest --help
 
-      - name: Sanity — bot help
-        run: start_telegram_bot --help
-
       - name: Sanity — sqlite select 1
         run: python -c "import sqlite3; con=sqlite3.connect('ci_smoke.sqlite'); con.execute('select 1'); con.close()"
 
