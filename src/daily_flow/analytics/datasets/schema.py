@@ -22,6 +22,7 @@ COMMON_MOOD_LOGS_DTYPES = {
 DTYPES = {**COMMON_MOOD_LOGS_DTYPES, **MOOD_LOGS_DTYPES}
 
 REQUIRED_COLUMNS = ["day"]
+MOOD_COLUMNS = list(MOOD_LOGS_DTYPES.keys())
 
 
 def apply_schema(df: pd.DataFrame) -> pd.DataFrame:
