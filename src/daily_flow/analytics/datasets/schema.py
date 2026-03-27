@@ -23,6 +23,8 @@ DTYPES = {**COMMON_MOOD_LOGS_DTYPES, **MOOD_LOGS_DTYPES}
 
 REQUIRED_COLUMNS = ["day"]
 MOOD_COLUMNS = list(MOOD_LOGS_DTYPES.keys())
+GOOD_MOOD_COLUMNS = ["joy", "interest", "calm", "energy", "confidence", "sleep"]
+BAD_MOOD_COLUMNS = ["anxiety", "sadness", "irritation", "fatigue", "fear"]
 
 
 def apply_schema(df: pd.DataFrame) -> pd.DataFrame:
