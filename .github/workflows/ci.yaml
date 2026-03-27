@@ -46,4 +46,5 @@ jobs:
         run: python -c "import sqlite3; con=sqlite3.connect('ci_smoke.sqlite'); con.execute('select 1'); con.close()"
 
       - name: Security — pip-audit (non-blocking)
+        continue-on-error: true
         run: pip-audit
