@@ -20,7 +20,7 @@ COMMON_MOOD_LOGS_DTYPES = {
 }
 
 DTYPES = {**COMMON_MOOD_LOGS_DTYPES, **MOOD_LOGS_DTYPES}
-
+FACTORS = ["sleep"]
 REQUIRED_COLUMNS = ["day"]
 MOOD_COLUMNS = list(MOOD_LOGS_DTYPES.keys())
 GOOD_MOOD_COLUMNS = ["joy", "interest", "calm", "energy", "confidence", "sleep"]

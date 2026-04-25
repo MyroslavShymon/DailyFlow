@@ -35,17 +35,23 @@ def add_data_type(df):
     return out
 
 
-def calculate_synthetic_mood(df_to_process: pd.DataFrame):
-    temp = df_to_process[MOOD_COLUMNS].copy()
+def calculate_synthetic_mood(
+    df_to_process: pd.DataFrame,
+    columns_to_process=MOOD_COLUMNS,
+    bad_columns_to_process=BAD_MOOD_COLUMNS,
+):
+    temp = df_to_process[columns_to_process].copy()
 
     min_mood_val, max_mood_val = 1, 4
     _, max_common_mood_val = 1, 7
 
-    temp[BAD_MOOD_COLUMNS] = (max_mood_val + min_mood_val) - temp[BAD_MOOD_COLUMNS]
+    temp[bad_columns_to_process] = (max_mood_val + min_mood_val) - temp[bad_columns_to_process]
 
-    temp[MOOD_COLUMNS] = (temp[MOOD_COLUMNS] - min_mood_val) / (max_mood_val - min_mood_val)
+    temp[columns_to_process] = (temp[columns_to_process] - min_mood_val) / (
+        max_mood_val - min_mood_val
+    )
 
-    scaled_total = temp[MOOD_COLUMNS].mean(axis=1)
+    scaled_total = temp[columns_to_process].mean(axis=1)
     return scaled_total * (max_common_mood_val - 1) + 1
 
 

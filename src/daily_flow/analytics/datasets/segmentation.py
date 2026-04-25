@@ -1,3 +1,8 @@
+from daily_flow.analytics.datasets.constants import FINAL_DATASET_PERIODS
+from daily_flow.analytics.datasets.loader import load_mood_mart_sync
+from daily_flow.analytics.datasets.prepare import prepare_public_mood_df
+
+
 def segment_df(df_to_segment):
     out = df_to_segment.sort_index().copy()
 
@@ -45,3 +50,15 @@ def filter_short_sub_segments(df, min_days=7, keep_first=True):
 
 def slice_periods(df, periods):
     return {name: df.loc[start:end].copy() for name, (start, end) in periods.items()}
+
+
+def get_clean_segmented_data():
+    raw_df = load_mood_mart_sync()
+    initial_df = prepare_public_mood_df(raw_df)
+
+    df, _ = segment_df(initial_df)
+    df = add_sub_segments(df, max_gap_days=5)
+    filtered_df, _ = filter_short_sub_segments(df, min_days=7, keep_first=True)
+    filtered_df, _ = segment_df(filtered_df)
+
+    return initial_df, slice_periods(filtered_df, FINAL_DATASET_PERIODS)
